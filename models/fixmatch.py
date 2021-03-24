@@ -5,26 +5,7 @@ from holim_lightning.optimizers import get_optim
 from holim_lightning.schedulers import get_sched
 
 from .wide_resnet import build_wideresnet
-
-
-class EMAModel(torch.optim.swa_utils.AveragedModel):
-
-    def __init__(self, model, decay=0.9999, device=None):
-        self.decay = decay
-        def ema_fn(p_swa, p_model, n):
-            return self.decay * p_swa + (1. - self.decay) * p_model
-        super().__init__(model, device, ema_fn)
-
-    def update_parameters(self, model):
-        super().update_parameters(model)
-        for b_swa, b_model in zip(self.module.buffers(), model.buffers()):
-            device = b_swa.device
-            b_model_ = b_model.detach().to(device)
-            if self.n_averaged == 0:
-                b_swa.detach().copy_(b_model_)
-            else:
-                b_swa.detach().copy_(self.avg_fn(b_swa.detach(), b_model_,
-                                                 self.n_averaged.to(device)))
+from .ema import EMAModel
 
 
 class FixMatchCrossEntropy(torch.nn.Module):
@@ -136,7 +117,7 @@ class FixMatchClassifier(pl.LightningModule):
         z = self.model(x)
         loss = self.CE(z, y)
         self.valid_acc.update(z.softmax(dim=1), y)
-        zₑₘₐ = self.ema(x)
+        zₑₘₐ = self.ema.ema(x)
         lossₑₘₐ = self.CE(zₑₘₐ, y)
         self.ema_valid_acc.update(zₑₘₐ.softmax(dim=1), y)
         return {'loss': loss, 'loss_ema': lossₑₘₐ}
