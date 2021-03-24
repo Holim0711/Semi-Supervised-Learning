@@ -1,8 +1,5 @@
 {
     "model": {
-        "backbone": "wide_resnet28_2",
-        "num_classes": 10,
-        "pretrained": false,
         "EMA": {
             "decay": 0.999
         },
@@ -30,7 +27,6 @@
             "nesterov": true
         },
         "scheduler": {
-            "name": "CosineAnnealingWarmUp",
             "T_max": 1048576,
             "T_warm": 0
         },

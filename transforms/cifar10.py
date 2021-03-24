@@ -14,7 +14,7 @@ train_transform = transforms.Compose([
 rand_transform = transforms.Compose([
     transforms.RandomHorizontalFlip(),
     transforms.RandomCrop(size=32, padding=4, padding_mode='reflect'),
-    RandAugment(2, 16),
+    RandAugment(2, 10),
     transforms.ToTensor(),
     transforms.Normalize(mean=cifar10_mean, std=cifar10_std)
 ])

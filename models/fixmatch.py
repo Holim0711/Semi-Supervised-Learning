@@ -1,8 +1,10 @@
+import math
 import torch
 import pytorch_lightning as pl
-from holim_lightning.models import get_model
 from holim_lightning.optimizers import get_optim
 from holim_lightning.schedulers import get_sched
+
+from .wide_resnet import build_wideresnet
 
 
 class EMAModel(torch.optim.swa_utils.AveragedModel):
@@ -49,16 +51,32 @@ class FixMatchCrossEntropy(torch.nn.Module):
         return loss
 
 
+class FixMatchScheduler(torch.optim.lr_scheduler.LambdaLR):
+    def __init__(self, optimizer, T_max, T_warm=0, T_mute=0, last_epoch=-1):
+        self.T_max = T_max
+        self.T_warm = T_warm
+        self.T_mute = T_mute
+
+        def lr_lambda(t):
+            if t < T_mute:
+                return 0
+            elif t < T_warm:
+                return (float(t) - float(T_mute)) / (float(T_warm) - float(T_mute))
+            elif t < T_max:
+                θ = (7 / 16) * float(t - T_warm) / float(T_max - T_warm)
+                return 0.5 * (1 + math.cos(θ * math.pi))
+            return 0.
+
+        super().__init__(optimizer, lr_lambda, last_epoch)
+
+
 class FixMatchClassifier(pl.LightningModule):
 
     def __init__(self, **kwargs):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model = get_model(
-            self.hparams.model['backbone'],
-            self.hparams.model['num_classes'],
-            pretrained=self.hparams.model['pretrained'])
+        self.model = build_wideresnet(28, 2, 0.0, 10)
         self.ema = EMAModel(self.model, self.hparams.model['EMA']['decay'])
         self.CE = torch.nn.CrossEntropyLoss()
         self.FM_CE = FixMatchCrossEntropy(
@@ -149,7 +167,7 @@ class FixMatchClassifier(pl.LightningModule):
              'weight_decay': 0.0},
         ]
         optim = get_optim(parameters, **self.hparams.optim['optimizer'])
-        sched = get_sched(optim, **self.hparams.optim['scheduler'])
+        sched = FixMatchScheduler(optim, **self.hparams.optim['scheduler'])
         return {
             'optimizer': optim,
             'lr_scheduler': {
