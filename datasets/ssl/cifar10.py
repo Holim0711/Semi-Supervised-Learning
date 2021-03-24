@@ -56,11 +56,6 @@ class SSL_CIFAR10(pl.LightningDataModule):
 
         train_idxₗ, train_idxᵤ = index_split(cifar10_train.targets, self.num_labeled)
 
-        # expand train_idxₗ to match the number of batch iteration
-        n_iter = (len(train_idxᵤ) - 1) // self.batch_sizeᵤ + 1
-        expand = ((n_iter * self.batch_sizeₗ) - 1) // len(train_idxₗ) + 1
-        train_idxₗ = [i for _ in range(expand) for i in train_idxₗ]
-
         self.cifar10_trainₗ = SubsetCIFAR10(
             self.root, train_idxₗ, train=True, transform=self.train_transformₗ)
         self.cifar10_trainᵤ = SubsetCIFAR10(
@@ -90,12 +85,25 @@ class SSL_CIFAR10(pl.LightningDataModule):
 if __name__ == "__main__":
     from torchvision import transforms
     trfm = transforms.ToTensor()
-    dm = SSL_CIFAR10('data/cifar10')
+    dm = SSL_CIFAR10(**{
+        "root": "data/cifar10",
+        "num_labeled": 4000,
+        "batch_size": {
+            "labeled": 64,
+            "unlabeled": 448
+        }
+    })
     dm.train_transformₗ = trfm
     dm.train_transformᵤ = trfm
     dm.valid_transform = trfm
     dm.prepare_data()
     dm.setup()
+    print("labeled dataset:", len(dm.cifar10_trainₗ))
+    print("unlabeled dataset:", len(dm.cifar10_trainᵤ))
+    print("test dataset:", len(dm.cifar10_test))
+    print("labeled loader:", len(dm.train_dataloader()['labeled']))
+    print("unlabeled loader:", len(dm.train_dataloader()['unlabeled']))
+    print("test loader:", len(dm.val_dataloader()))
     #for x in zip(*dm.train_dataloader()):
     #    print(x)
     #for x in dm.val_dataloader():
