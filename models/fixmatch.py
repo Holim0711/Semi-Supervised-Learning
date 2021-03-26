@@ -1,10 +1,9 @@
 import math
 import torch
 import pytorch_lightning as pl
+from holim_lightning.models.custom.wrn28 import build_wide_resnet28
 from holim_lightning.optimizers import get_optim
 from holim_lightning.schedulers import get_sched
-
-from .wide_resnet import build_wideresnet
 from .ema import EMAModel
 
 
@@ -51,13 +50,23 @@ class FixMatchScheduler(torch.optim.lr_scheduler.LambdaLR):
         super().__init__(optimizer, lr_lambda, last_epoch)
 
 
+class FixMatchBatchNorm(torch.nn.BatchNorm2d):
+    def __init__(self, num_features):
+        super().__init__(num_features, momentum=0.001)
+
+
+class FixMatchReLU(torch.nn.LeakyReLU):
+    def __init__(self):
+        super().__init__(0.1, inplace=True)
+
+
 class FixMatchClassifier(pl.LightningModule):
 
     def __init__(self, **kwargs):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model = build_wideresnet(28, 2, 0.0, 10)
+        self.model = build_wide_resnet28("wide_resnet28_2", 10, norm_layer=FixMatchBatchNorm, relu_layer=FixMatchReLU)
         self.ema = EMAModel(self.model, self.hparams.model['EMA']['decay'])
         self.CE = torch.nn.CrossEntropyLoss()
         self.FM_CE = FixMatchCrossEntropy(
