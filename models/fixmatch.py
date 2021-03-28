@@ -1,7 +1,7 @@
 import math
 import torch
 import pytorch_lightning as pl
-from holim_lightning.models.custom.wrn28 import build_wide_resnet28
+from holim_lightning.models.custom.wrn28_tf import build_wide_resnet28_tf
 from holim_lightning.optimizers import get_optim
 from holim_lightning.schedulers import get_sched
 from .ema import EMAModel
@@ -66,7 +66,10 @@ class FixMatchClassifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model = build_wide_resnet28("wide_resnet28_2", 10, norm_layer=FixMatchBatchNorm, relu_layer=FixMatchReLU)
+        self.model = build_wide_resnet28_tf(
+            "wide_resnet28_2_tf", 10,
+            norm_layer=FixMatchBatchNorm,
+            relu_layer=FixMatchReLU)
         self.ema = EMAModel(self.model, self.hparams.model['EMA']['decay'])
         self.CE = torch.nn.CrossEntropyLoss()
         self.FM_CE = FixMatchCrossEntropy(
