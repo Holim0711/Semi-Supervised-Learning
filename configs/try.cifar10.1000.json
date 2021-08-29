@@ -1,0 +1,53 @@
+{
+    "transform": {
+        "weak": [
+            {"name": "RandomHorizontalFlip"},
+            {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"},
+            {"name": "ToTensor"},
+            {"name": "Normalize", "dataset": "CIFAR10"}
+        ],
+        "strong": [
+            {"name": "RandomHorizontalFlip"},
+            {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"},
+            {"name": "RandAugment", "m": 2, "n": 10},
+            {"name": "ToTensor"},
+            {"name": "Normalize", "dataset": "CIFAR10"}
+        ],
+        "valid": [
+            {"name": "ToTensor"},
+            {"name": "Normalize", "dataset": "CIFAR10"}
+        ]
+    },
+    "model": {
+        "EMA": {
+            "decay": 0.999
+        },
+        "fixmatch": {
+            "factor": 1.0,
+            "temperature": 1.0,
+            "threshold": 0.95
+        }
+    },
+    "dataset": {
+        "name": "cifar10",
+        "root": "data/cifar10",
+        "num_labeled": 1000,
+        "batch_size": {
+            "labeled": 64,
+            "unlabeled": 448
+        }
+    },
+    "optimizer": {
+        "name": "SGD",
+        "lr": 0.03,
+        "momentum": 0.9,
+        "weight_decay": 0.0005,
+        "nesterov": true
+    },
+    "lr_dict": {
+        "scheduler": {
+            "T_max": 1048576
+        },
+        "interval": "step"
+    }
+}

@@ -7,31 +7,29 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 
 from models import *
 from datasets import select_datasets
-from transforms.cifar10 import train_transform, rand_transform, valid_transform
-from transforms.twin import NqTwinTransform
+from holim_lightning.transforms import get_trfms, NqTwinTransform
 
 
-def train(hparams, ckpt_path=None):
+def train(hparams, tparams):
+    transform_w = get_trfms(hparams['transform']['weak'])
+    transform_s = get_trfms(hparams['transform']['strong'])
+    transform_v = get_trfms(hparams['transform']['valid'])
+
     dm = select_datasets(**hparams['dataset'])
-    dm.train_transformₗ = train_transform
-    dm.train_transformᵤ = NqTwinTransform(train_transform, rand_transform)
-    dm.valid_transform = valid_transform
+    dm.train_transformₗ = transform_w
+    dm.train_transformᵤ = NqTwinTransform(transform_s, transform_w)
+    dm.valid_transform = transform_v
 
     model = FixMatchClassifier(**hparams)
 
     logger = TensorBoardLogger("logs", hparams['name'])
 
     callbacks = [
-        # ModelCheckpoint(monitor='val/acc', save_last=True),
+        ModelCheckpoint(monitor='val/acc'),
         LearningRateMonitor(logging_interval='step'),
     ]
 
-    trainer = pl.Trainer(
-        gpus=1,
-        logger=logger,
-        callbacks=callbacks,
-        **hparams['trainer'])
-
+    trainer = pl.Trainer(logger=logger, callbacks=callbacks, **tparams)
     trainer.fit(model, dm)
 
 
