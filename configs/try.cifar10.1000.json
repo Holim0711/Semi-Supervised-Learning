@@ -31,10 +31,15 @@
     "dataset": {
         "name": "cifar10",
         "root": "data/cifar10",
-        "num_labeled": 1000,
+        "num_clean": 1000,
+        "noise_type": "symmetric",
+        "noise_ratio": 0.0,
+        "exclude_clean": false,
+        "multiply_clean": 1,
         "batch_size": {
-            "labeled": 64,
-            "unlabeled": 448
+            "clean": 64,
+            "noisy": 448,
+            "valid": 512
         }
     },
     "optimizer": {

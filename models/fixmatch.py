@@ -38,14 +38,20 @@ class FixMatchScheduler(torch.optim.lr_scheduler.LambdaLR):
         super().__init__(optimizer, lr_lambda, last_epoch)
 
 
-class FixMatchBatchNorm(torch.nn.BatchNorm2d):
-    def __init__(self, num_features):
-        super().__init__(num_features, momentum=0.001)
+def change_bn(model):
+    if isinstance(model, torch.nn.BatchNorm2d):
+        model.momentum = 0.001
+    else:
+        for children in model.children():
+            change_bn(children)
 
 
-class FixMatchReLU(torch.nn.LeakyReLU):
-    def __init__(self):
-        super().__init__(0.1, inplace=True)
+def replace_relu(model):
+    for child_name, child in model.named_children():
+        if isinstance(child, torch.nn.ReLU):
+            setattr(model, child_name, torch.nn.LeakyReLU(0.1, inplace=True))
+        else:
+            replace_relu(child)
 
 
 class FixMatchClassifier(pl.LightningModule):
@@ -55,8 +61,8 @@ class FixMatchClassifier(pl.LightningModule):
         self.save_hyperparameters()
 
         self.model = get_model('custom', 'wide_resnet28_2', 10)
-        # TODO: replace BatchNorm
-        # TODO: replace ReLU
+        change_bn(self.model)
+        replace_relu(self.model)
         self.ema = EMAModel(self.model, self.hparams.model['EMA']['decay'])
         self.criterionₗ = torch.nn.CrossEntropyLoss()
         self.criterionᵤ = FixMatchCrossEntropy(
