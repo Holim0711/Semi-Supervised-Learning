@@ -9,7 +9,7 @@
         "strong": [
             {"name": "RandomHorizontalFlip"},
             {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"},
-            {"name": "RandAugment", "m": 2, "n": 10},
+            {"name": "RandAugment", "n": 2, "m": 10, "fillcolor": [125, 123, 114]},
             {"name": "ToTensor"},
             {"name": "Normalize", "dataset": "CIFAR10"}
         ],
@@ -19,14 +19,16 @@
         ]
     },
     "model": {
-        "EMA": {
-            "decay": 0.999
+        "backbone": {
+            "src": "custom",
+            "name": "wide_resnet28_2",
+            "num_classes": 10
         },
-        "fixmatch": {
-            "factor": 1.0,
+        "loss_u": {
             "temperature": 1.0,
             "threshold": 0.95
-        }
+        },
+        "ema": 0.999
     },
     "dataset": {
         "name": "cifar10",
@@ -51,7 +53,8 @@
     },
     "lr_dict": {
         "scheduler": {
-            "T_max": 1048576
+            "name": "Cosine716",
+            "max_steps": 1048576
         },
         "interval": "step"
     }

@@ -1,5 +1,15 @@
 # FixMatch-Lightning
 
+## Dependencies
+```
+conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
+pip install pytorch-lightning
+pip install lightning-bolts
+
+holim-lightning
+noisy-cifar
+```
+
 ## Results
 
 ### CIFAR10
