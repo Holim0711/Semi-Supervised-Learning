@@ -34,7 +34,7 @@
     "dataset": {
         "name": "cifar10",
         "root": "data/cifar10",
-        "num_clean": 1000,
+        "num_clean": 250,
         "noise_type": "symmetric",
         "noise_ratio": 0.0,
         "exclude_clean": false,
