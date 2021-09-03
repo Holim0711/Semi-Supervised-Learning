@@ -13,9 +13,9 @@ noisy-cifar
 ## Results
 
 ### CIFAR10
-| #Labels | 1000 | 4000 |
-|:---:|:---:|:---:|
-| Acc. | WIP | WIP |
+| #Labels | 40 | 250 | 4000 |
+|:---:|:---:|:---:|:---:|
+| Acc. | TODO | 95.14 | 95.92 |
 
 
 ## References
