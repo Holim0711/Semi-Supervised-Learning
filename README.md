@@ -15,7 +15,7 @@ noisy-cifar
 ### CIFAR10
 | #Labels | 40 | 250 | 4000 |
 |:---:|:---:|:---:|:---:|
-| Acc. | TODO | 95.14 | 95.92 |
+| Acc. | TODO | 95.47 | 95.95 |
 
 
 ## References
