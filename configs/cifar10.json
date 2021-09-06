@@ -33,12 +33,6 @@
     },
     "dataset": {
         "name": "cifar10",
-        "root": "data/cifar10",
-        "num_clean": 40,
-        "noise_type": "symmetric",
-        "noise_ratio": 0.0,
-        "exclude_clean": false,
-        "multiply_clean": 90,
         "batch_size": {
             "clean": 64,
             "noisy": 448,

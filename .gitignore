@@ -130,5 +130,6 @@ dmypy.json
 
 # This Repo
 .vscode
+lightning_logs/
 logs/
 data/
