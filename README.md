@@ -12,10 +12,11 @@ noisy-cifar
 
 ## Results
 
-### CIFAR10
-| #Labels | 40 | 250 | 4000 |
+### Accuracy
+| Dataset | 4 | 25 | 400 |
 |:---:|:---:|:---:|:---:|
-| Acc. | 93.29 | 95.48 | 95.95 |
+| CIFAR10 | 93.77 | 95.48 | 95.95 |
+| CIFAR100 | WIP | WIP | WIP |
 
 
 ## References
