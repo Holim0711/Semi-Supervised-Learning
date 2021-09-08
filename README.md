@@ -15,7 +15,7 @@ noisy-cifar
 ### Accuracy
 | Dataset | 4 | 25 | 400 |
 |:---:|:---:|:---:|:---:|
-| CIFAR10 | 93.77 | 95.48 | 95.95 |
+| CIFAR10 | 93.82 | 95.48 | 95.95 |
 | CIFAR100 | WIP | WIP | WIP |
 
 
