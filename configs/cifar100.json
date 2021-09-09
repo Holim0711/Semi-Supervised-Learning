@@ -4,7 +4,7 @@
             {"name": "RandomHorizontalFlip"},
             {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"},
             {"name": "ToTensor"},
-            {"name": "Normalize", "dataset": "CIFAR10"}
+            {"name": "Normalize", "dataset": "CIFAR100"}
         ],
         "strong": [
             {"name": "RandomHorizontalFlip"},
@@ -12,27 +12,27 @@
             {"name": "RandAugmentUDA", "n": 2, "fillcolor": [125, 123, 114]},
             {"name": "Cutout", "ratio": 0.5, "fillcolor": [125, 123, 114]},
             {"name": "ToTensor"},
-            {"name": "Normalize", "dataset": "CIFAR10"}
+            {"name": "Normalize", "dataset": "CIFAR100"}
         ],
         "valid": [
             {"name": "ToTensor"},
-            {"name": "Normalize", "dataset": "CIFAR10"}
+            {"name": "Normalize", "dataset": "CIFAR100"}
         ]
     },
     "model": {
         "backbone": {
             "src": "custom",
-            "name": "wide_resnet28_8",
-            "num_classes": 10
+            "name": "wide_resnet28_2",
+            "num_classes": 100
         },
         "loss_u": {
             "temperature": 1.0,
             "threshold": 0.95
         },
-        "ema": 0.999
+        "momentum": 0.999
     },
     "dataset": {
-        "name": "cifar10",
+        "name": "cifar100",
         "batch_size": {
             "clean": 64,
             "noisy": 448,
