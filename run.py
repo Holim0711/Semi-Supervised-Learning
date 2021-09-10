@@ -9,7 +9,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 from torchvision.datasets.cifar import CIFAR10
 from torch.utils.data import DataLoader
 
-from models import FixMatchClassifier
+from fixmatch import FixMatchClassifier
 from holim_lightning.transforms import get_trfms, NqTwinTransform
 from noisy_cifar import NoisyCIFAR10
 

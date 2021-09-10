@@ -5,7 +5,13 @@ from torchmetrics import Accuracy
 from holim_lightning.models import get_model
 from holim_lightning.optimizers import get_optim, exclude_wd
 from holim_lightning.schedulers import get_lr_dict
-from .ema import EMAModel
+
+
+class AveragedModelWithBuffers(torch.optim.swa_utils.AveragedModel):
+    def update_parameters(self, model):
+        super().update_parameters(model)
+        for a, b in zip(self.module.buffers(), model.buffers()):
+            a.copy_(b.to(a.device))
 
 
 class FixMatchCrossEntropy(torch.nn.Module):
@@ -59,12 +65,13 @@ class FixMatchClassifier(pl.LightningModule):
         replace_relu(self.model)
         self.criterionₗ = torch.nn.CrossEntropyLoss()
         self.criterionᵤ = FixMatchCrossEntropy(**self.hparams.model['loss_u'])
-        self.ema = EMAModel(self.model, self.hparams.model['ema'])
         self.train_acc = Accuracy()
         self.valid_acc = Accuracy()
 
-    def forward(self, x):
-        return self.ema(x).softmax(dim=1)
+        def avg_fn(averaged_model_parameter, model_parameter, num_averaged):
+            α = self.hparams.model['ema']
+            return α * averaged_model_parameter + (1 - α) * model_parameter
+        self.ema = AveragedModelWithBuffers(self.model, avg_fn=avg_fn)
 
     def training_step(self, batch, batch_idx):
         xₗ, yₗ = batch['clean']
@@ -98,7 +105,7 @@ class FixMatchClassifier(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        z = self.ema.ema(x)
+        z = self.ema(x)
         loss = self.criterionₗ(z, y)
         self.valid_acc.update(z.softmax(dim=1), y)
         return {'loss': loss}
