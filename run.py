@@ -49,11 +49,11 @@ def train(hparams, dparams, tparams):
     trainer.fit(model, dm)
 
 
-def test(hparams, dparams, tparams, ckpt_path):
+def test(hparams, tparams, ckpt_path):
     trainer = Trainer.from_argparse_args(tparams)
-    dm = DataModule[hparams['dataset']['name']].from_argparse_args(
+    dm = DataModule[hparams['dataset']['name']](
         os.path.join('data', hparams['dataset']['name']),
-        dparams,
+        num_clean=0,
         batch_size_valid=hparams['dataset']['batch_size']['valid'],
         transform_valid=get_trfms(hparams['transform']['valid']),
     )
@@ -72,10 +72,10 @@ if __name__ == "__main__":
 
     if args.mode == 'train':
         parser.add_argument('--random_seed', type=int)
+        parser = DataModule[hparams['dataset']['name']].add_argparse_args(parser)
     else:
         parser.add_argument('--ckpt_path', type=str, required=True)
 
-    parser = DataModule[hparams['dataset']['name']].add_argparse_args(parser)
     parser = Trainer.add_argparse_args(parser)
     args = parser.parse_args()
 
@@ -95,4 +95,4 @@ if __name__ == "__main__":
     if args.mode == 'train':
         train(hparams, dparams, tparams)
     else:
-        test(hparams, dparams, tparams, args.ckpt_path)
+        test(hparams, tparams, args.ckpt_path)
