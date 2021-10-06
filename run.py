@@ -6,20 +6,22 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.utilities.seed import seed_everything
-from torchvision.datasets.cifar import CIFAR10
-from torch.utils.data import DataLoader
 
 from fixmatch import FixMatchClassifier
 from holim_lightning.transforms import get_trfms, NqTwinTransform
-from noisy_cifar import NoisyCIFAR10
+from noisy_cifar import NoisyCIFAR10, NoisyCIFAR100
 
 DataModule = {
     'cifar10': NoisyCIFAR10,
+    'cifar100': NoisyCIFAR100,
 }
 
 
 def train(hparams, dparams, tparams):
-    logger = TensorBoardLogger("lightning_logs", str(dparams.num_clean))
+    logger = TensorBoardLogger(
+        f"lightning_logs/{hparams['dataset']['name']}",
+        str(dparams.num_clean)
+    )
     callbacks = [
         ModelCheckpoint(save_top_k=1, monitor='val/acc', mode='max'),
         LearningRateMonitor(),
@@ -49,13 +51,14 @@ def train(hparams, dparams, tparams):
 
 def test(hparams, tparams, ckpt_path):
     trainer = Trainer.from_argparse_args(tparams)
-    dataset = CIFAR10(root=os.path.join('data', hparams['dataset']['name']),
-                      train=False,
-                      transform=get_trfms(hparams['transform']['valid']))
-    dataloader = DataLoader(dataset, hparams['dataset']['batch_size']['valid'],
-                            num_workers=os.cpu_count(), pin_memory=True)
-    pl_module = FixMatchClassifier.load_from_checkpoint(ckpt_path)
-    trainer.test(pl_module, dataloader)
+    dm = DataModule[hparams['dataset']['name']](
+        os.path.join('data', hparams['dataset']['name']),
+        num_clean=0,
+        batch_size_valid=hparams['dataset']['batch_size']['valid'],
+        transform_valid=get_trfms(hparams['transform']['valid']),
+    )
+    model = FixMatchClassifier.load_from_checkpoint(ckpt_path)
+    trainer.test(model, dm)
 
 
 if __name__ == "__main__":
@@ -78,7 +81,7 @@ if __name__ == "__main__":
 
     for g in parser._action_groups:
         group_dict = {a.dest: getattr(args, a.dest, None) for a in g._group_actions}
-        if g.title in {'NoisyCIFAR10'}:
+        if g.title in {'NoisyCIFAR10', 'NoisyCIFAR100'}:
             dparams = argparse.Namespace(**group_dict)
         elif g.title == 'pl.Trainer':
             tparams = argparse.Namespace(**group_dict)

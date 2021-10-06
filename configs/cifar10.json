@@ -29,7 +29,7 @@
             "temperature": 1.0,
             "threshold": 0.95
         },
-        "ema": 0.999
+        "momentum": 0.999
     },
     "dataset": {
         "name": "cifar10",
