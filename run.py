@@ -8,91 +8,84 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.utilities.seed import seed_everything
 
 from fixmatch import FixMatchClassifier
-from holim_lightning.transforms import get_trfms, NqTwinTransform
-from noisy_cifar import NoisyCIFAR10, NoisyCIFAR100
+from weaver.transforms import get_trfms
+from weaver.transforms.twin_transforms import NqTwinTransform
+from dual_cifar import SemiCIFAR10, SemiCIFAR100
 
 DataModule = {
-    'cifar10': NoisyCIFAR10,
-    'cifar100': NoisyCIFAR100,
+    'cifar10': SemiCIFAR10,
+    'cifar100': SemiCIFAR100,
 }
 
 
-def train(hparams, dparams, tparams):
-    logger = TensorBoardLogger(
-        f"lightning_logs/{hparams['dataset']['name']}",
-        str(dparams.num_clean)
-    )
-    callbacks = [
-        ModelCheckpoint(save_top_k=1, monitor='val/acc', mode='max'),
-        LearningRateMonitor(),
-    ]
-    trainer = Trainer.from_argparse_args(tparams, logger=logger, callbacks=callbacks)
+def train(config, args):
+    config['dataset']['n'] = args.n
+    config['dataset']['random_seed'] = args.random_seed
+    seed_everything(args.random_seed)
 
-    num_devices = trainer.num_nodes * max(trainer.num_processes, trainer.num_gpus, trainer.tpu_cores or 0)
-
-    transform_w = get_trfms(hparams['transform']['weak'])
-    transform_s = get_trfms(hparams['transform']['strong'])
-    transform_v = get_trfms(hparams['transform']['valid'])
-
-    dm = DataModule[hparams['dataset']['name']].from_argparse_args(
-        os.path.join('data', hparams['dataset']['name']),
-        dparams,
-        batch_size_clean=hparams['dataset']['batch_size']['clean'] // num_devices,
-        batch_size_noisy=hparams['dataset']['batch_size']['noisy'] // num_devices,
-        batch_size_valid=hparams['dataset']['batch_size']['valid'] // num_devices,
-        transform_clean=transform_w,
-        transform_noisy=NqTwinTransform(transform_s, transform_w),
-        transform_valid=transform_v,
+    trainer = Trainer.from_argparse_args(
+        args,
+        logger=TensorBoardLogger('logs', config['dataset']['name']),
+        callbacks=[
+            ModelCheckpoint(save_top_k=1, monitor='val/acc', mode='max'),
+            LearningRateMonitor(),
+        ]
     )
 
-    model = FixMatchClassifier(**hparams)
+    transform_w = get_trfms(config['transform']['weak'])
+    transform_s = get_trfms(config['transform']['strong'])
+    transform_v = get_trfms(config['transform']['valid'])
+
+    dm = DataModule[config['dataset']['name']](
+        os.path.join('data', config['dataset']['name']),
+        args.n,
+        transforms={
+            'labeled': transform_w,
+            'unlabeled': NqTwinTransform(transform_s, transform_w),
+            'val': transform_v
+        },
+        batch_sizes=config['dataset']['batch_sizes'],
+        random_seed=args.random_seed
+    )
+
+    model = FixMatchClassifier(**config)
     trainer.fit(model, dm)
 
 
-def test(hparams, tparams, ckpt_path):
-    trainer = Trainer.from_argparse_args(tparams)
-    dm = DataModule[hparams['dataset']['name']](
-        os.path.join('data', hparams['dataset']['name']),
-        num_clean=0,
-        batch_size_valid=hparams['dataset']['batch_size']['valid'],
-        transform_valid=get_trfms(hparams['transform']['valid']),
+def test(config, args):
+    trainer = Trainer.from_argparse_args(args)
+    dm = DataModule[config['dataset']['name']](
+        os.path.join('data', config['dataset']['name']),
+        n=0,
+        transforms={'val': get_trfms(config['transform']['val'])},
+        batch_sizes={'val': config['dataset']['batch_size']['val']},
     )
-    model = FixMatchClassifier.load_from_checkpoint(ckpt_path)
+    model = FixMatchClassifier.load_from_checkpoint(args.ckpt_path)
     trainer.test(model, dm)
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['train', 'test'])
     parser.add_argument('config', type=str)
-    args, _ = parser.parse_known_args()
-
-    with open(args.config) as file:
-        hparams = json.load(file)
-
-    if args.mode == 'train':
-        parser.add_argument('--random_seed', type=int)
-        parser = DataModule[hparams['dataset']['name']].add_argparse_args(parser)
-    else:
-        parser.add_argument('--ckpt_path', type=str, required=True)
-
+    parser.add_argument('--n', type=int)
+    parser.add_argument('--random_seed', type=int, default=1234)
+    parser.add_argument('--ckpt_path', type=str)
     parser = Trainer.add_argparse_args(parser)
+
     args = parser.parse_args()
 
-    for g in parser._action_groups:
-        group_dict = {a.dest: getattr(args, a.dest, None) for a in g._group_actions}
-        if g.title in {'NoisyCIFAR10', 'NoisyCIFAR100'}:
-            dparams = argparse.Namespace(**group_dict)
-        elif g.title == 'pl.Trainer':
-            tparams = argparse.Namespace(**group_dict)
-
-    if args.random_seed:
-        hparams['random_seed'] = args.random_seed
-
-    if hparams.get('random_seed') is not None:
-        seed_everything(hparams['random_seed'])
+    with open(args.config) as file:
+        config = json.load(file)
 
     if args.mode == 'train':
-        train(hparams, dparams, tparams)
+        assert args.n > 0
+        assert args.random_seed
+        train(config, args)
     else:
-        test(hparams, tparams, args.ckpt_path)
+        assert args.ckpt_path
+        test(config, args)
+
+
+if __name__ == "__main__":
+    main()

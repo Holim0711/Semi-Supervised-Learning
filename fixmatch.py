@@ -2,9 +2,9 @@ from math import cos, pi
 import torch
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from holim_lightning.models import get_model
-from holim_lightning.optimizers import get_optim, exclude_wd
-from holim_lightning.schedulers import get_lr_dict
+from weaver.models import get_model
+from weaver.optimizers import get_optim, exclude_wd
+from weaver.schedulers import get_sched
 
 
 class AveragedModelWithBuffers(torch.optim.swa_utils.AveragedModel):
@@ -125,14 +125,20 @@ class FixMatchClassifier(pl.LightningModule):
         self.log('val/acc', acc, rank_zero_only=True)
         self.valid_acc.reset()
 
+    @property
+    def num_devices(self) -> int:
+        t = self.trainer
+        return t.num_nodes * max(t.num_processes, t.num_gpus, t.tpu_cores or 0)
+
+    @property
+    def steps_per_epoch(self) -> int:
+        num_accum = self.trainer.accumulate_grad_batches
+        return len(self.train_dataloader()) // (num_accum * self.num_devices)
+
     def configure_optimizers(self):
         params = exclude_wd(self.model)
         optim = get_optim(params, **self.hparams.optimizer)
-        if self.hparams.lr_dict['scheduler']['name'] == 'Cosine716':
-            T = self.hparams.lr_dict['scheduler']['max_steps']
-            sched = {'scheduler': torch.optim.lr_scheduler.LambdaLR(
-                        optim, lambda t: cos((7 / 16) * (t / T) * pi)),
-                     'interval': 'step'}
-        else:
-            sched = get_lr_dict(optim, **self.hparams.lr_dict)
-        return {'optimizer': optim, 'lr_scheduler': sched}
+        sched = get_sched(optim, **self.hparams.scheduler)
+        sched.extend(self.steps_per_epoch)
+        return {'optimizer': optim,
+                'lr_scheduler': {'scheduler': sched, 'interval': 'step'}}

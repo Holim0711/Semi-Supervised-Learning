@@ -2,12 +2,11 @@
 
 ## Dependencies
 ```
-conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
 pip install pytorch-lightning
-pip install lightning-bolts
 
-# install holim-lightning
-# install noisy-cifar
+# install weaver-pytorch
+# install dual-cifar-lightning
 ```
 
 ## Results
