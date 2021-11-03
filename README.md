@@ -9,6 +9,11 @@ pip install pytorch-lightning
 # install dual-cifar-lightning
 ```
 
+## Training
+```
+python run.py train configs/cifar10.json --n 4000 --gpus 2 --sync_batchnorm --accelerator 'ddp' --max_epochs 9362
+```
+
 ## Results
 
 ### CIFAR10
