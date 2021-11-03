@@ -14,14 +14,14 @@
             {"name": "ToTensor"},
             {"name": "Normalize", "dataset": "CIFAR100"}
         ],
-        "valid": [
+        "val": [
             {"name": "ToTensor"},
             {"name": "Normalize", "dataset": "CIFAR100"}
         ]
     },
     "model": {
         "backbone": {
-            "src": "custom",
+            "src": "weaver",
             "name": "wide_resnet28_2",
             "num_classes": 100
         },
@@ -34,9 +34,9 @@
     "dataset": {
         "name": "cifar100",
         "batch_sizes": {
-            "clean": 64,
-            "noisy": 448,
-            "valid": 512
+            "labeled": 64,
+            "unlabeled": 448,
+            "val": 512
         }
     },
     "optimizer": {

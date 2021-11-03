@@ -32,9 +32,11 @@ def train(config, args):
         ]
     )
 
+    nd = trainer.num_nodes * trainer.num_gpus
+
     transform_w = get_trfms(config['transform']['weak'])
     transform_s = get_trfms(config['transform']['strong'])
-    transform_v = get_trfms(config['transform']['valid'])
+    transform_v = get_trfms(config['transform']['val'])
 
     dm = DataModule[config['dataset']['name']](
         os.path.join('data', config['dataset']['name']),
@@ -44,7 +46,11 @@ def train(config, args):
             'unlabeled': NqTwinTransform(transform_s, transform_w),
             'val': transform_v
         },
-        batch_sizes=config['dataset']['batch_sizes'],
+        batch_sizes={
+            'labeled': config['dataset']['batch_sizes']['labeled'] // nd,
+            'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // nd,
+            'val': config['dataset']['batch_sizes']['val'],
+        },
         random_seed=args.random_seed
     )
 

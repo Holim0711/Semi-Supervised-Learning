@@ -74,8 +74,8 @@ class FixMatchClassifier(pl.LightningModule):
         self.ema = AveragedModelWithBuffers(self.model, avg_fn=avg_fn)
 
     def training_step(self, batch, batch_idx):
-        xₗ, yₗ = batch['clean']
-        (ˢxᵤ, ʷxᵤ), _ = batch['noisy']
+        xₗ, yₗ = batch['labeled']
+        (ˢxᵤ, ʷxᵤ), _ = batch['unlabeled']
 
         z = self.model(torch.cat((xₗ, ˢxᵤ, ʷxᵤ)))
         zₗ = z[:xₗ.shape[0]]
