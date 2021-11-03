@@ -132,8 +132,9 @@ class FixMatchClassifier(pl.LightningModule):
 
     @property
     def steps_per_epoch(self) -> int:
+        num_iter = len(self.train_dataloader()['unlabeled'])
         num_accum = self.trainer.accumulate_grad_batches
-        return len(self.train_dataloader()) // (num_accum * self.num_devices)
+        return num_iter // (num_accum * self.num_devices)
 
     def configure_optimizers(self):
         params = exclude_wd(self.model)

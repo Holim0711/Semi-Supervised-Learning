@@ -48,6 +48,6 @@
     },
     "scheduler": {
         "name": "CosineLR",
-        "T": 9362
+        "T": 10700
     }
 }
