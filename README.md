@@ -16,6 +16,11 @@ python run.py train configs/cifar10.json --n 250 --gpus 1 --max_epochs 9362
 python run.py train configs/cifar10.json --n 4000 --gpus 2 --sync_batchnorm --accelerator 'ddp' --max_epochs 9362
 ```
 
+## Testing
+```
+python run.py test configs/cifar10.json --gpus 1 --ckpt_path {path_to_checkpoint.ckpt}
+```
+
 ## Results
 
 ### CIFAR10
