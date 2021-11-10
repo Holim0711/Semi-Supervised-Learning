@@ -21,7 +21,7 @@ python run.py train configs/cifar10.json --n 4000 --gpus 2 --sync_batchnorm --ac
 ### CIFAR10
 |     |   4   |   25  |  400  |
 |:---:| :---: | :---: | :---: |
-| Acc | 93.82 | 95.48 | 95.95 |
+| Acc | 93.73 | 95.64 | 96.15 |
 
 ### CIFAR100
 |     |   4   |   25  |  100  |

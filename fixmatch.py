@@ -1,4 +1,3 @@
-from math import cos, pi
 import torch
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
@@ -124,6 +123,12 @@ class FixMatchClassifier(pl.LightningModule):
         acc = self.valid_acc.compute()
         self.log('val/acc', acc, rank_zero_only=True)
         self.valid_acc.reset()
+
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
+
+    def test_epoch_end(self, outputs):
+        return self.validation_epoch_end(outputs)
 
     @property
     def num_devices(self) -> int:

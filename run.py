@@ -59,12 +59,12 @@ def train(config, args):
 
 
 def test(config, args):
-    trainer = Trainer.from_argparse_args(args)
+    trainer = Trainer.from_argparse_args(args, logger=False)
     dm = DataModule[config['dataset']['name']](
         os.path.join('data', config['dataset']['name']),
         n=0,
         transforms={'val': get_trfms(config['transform']['val'])},
-        batch_sizes={'val': config['dataset']['batch_size']['val']},
+        batch_sizes={'val': config['dataset']['batch_sizes']['val']},
     )
     model = FixMatchClassifier.load_from_checkpoint(args.ckpt_path)
     trainer.test(model, dm)
