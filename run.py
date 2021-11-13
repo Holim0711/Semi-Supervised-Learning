@@ -7,7 +7,7 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.utilities.seed import seed_everything
 
-from fixmatch import FixMatchClassifier
+from fixmatch import *
 from weaver.transforms import get_trfms
 from weaver.transforms.twin_transforms import NqTwinTransform
 from dual_cifar import SemiCIFAR10, SemiCIFAR100
@@ -54,7 +54,8 @@ def train(config, args):
         random_seed=args.random_seed
     )
 
-    model = FixMatchClassifier(**config)
+    # model = FixMatchClassifier(**config)
+    model = FlexMatchClassifier(**config)
     trainer.fit(model, dm)
 
 

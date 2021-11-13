@@ -5,6 +5,8 @@ from weaver.models import get_model
 from weaver.optimizers import get_optim, exclude_wd
 from weaver.schedulers import get_sched
 
+__all__ = ['FixMatchClassifier', 'FlexMatchClassifier']
+
 
 class AveragedModelWithBuffers(torch.optim.swa_utils.AveragedModel):
     def update_parameters(self, model):
@@ -25,6 +27,34 @@ class FixMatchCrossEntropy(torch.nn.Module):
         probs = torch.softmax(logits_w / self.temperature, dim=-1)
         max_probs, targets = probs.max(dim=-1)
         masks = (max_probs > self.threshold).float()
+
+        loss = torch.nn.functional.cross_entropy(
+            logits_s, targets, reduction='none') * masks
+        self.𝜇ₘₐₛₖ = masks.mean().detach()
+
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        return loss
+
+
+class FlexMatchCrossEntropy(torch.nn.Module):
+    def __init__(self, temperature, threshold, reduction='mean'):
+        super().__init__()
+        self.threshold = threshold
+        self.temperature = temperature
+        self.reduction = reduction
+        self.𝜇ₘₐₛₖ = None
+
+    def forward(self, logits_s, logits_w):
+        probs = torch.softmax(logits_w / self.temperature, dim=-1)
+        max_probs, targets = probs.max(dim=-1)
+
+        β = targets.bincount(max_probs > self.threshold)
+        β /= max(β.max(), len(targets) - β.sum())
+        β /= 2 - β
+        masks = (max_probs > self.threshold * β[targets]).float()
 
         loss = torch.nn.functional.cross_entropy(
             logits_s, targets, reduction='none') * masks
@@ -148,3 +178,9 @@ class FixMatchClassifier(pl.LightningModule):
         sched.extend(self.steps_per_epoch)
         return {'optimizer': optim,
                 'lr_scheduler': {'scheduler': sched, 'interval': 'step'}}
+
+
+class FlexMatchClassifier(FixMatchClassifier):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.criterionᵤ = FlexMatchCrossEntropy(**self.hparams.model['loss_u'])
