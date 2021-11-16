@@ -10,7 +10,7 @@ from pytorch_lightning.utilities.seed import seed_everything
 from fixmatch import *
 from weaver.transforms import get_trfms
 from weaver.transforms.twin_transforms import NqTwinTransform
-from dual_cifar import SemiCIFAR10, SemiCIFAR100
+from deficient_cifar import SemiCIFAR10, SemiCIFAR100
 
 DataModule = {
     'cifar10': SemiCIFAR10,
@@ -51,7 +51,8 @@ def train(config, args):
             'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // nd,
             'val': config['dataset']['batch_sizes']['val'],
         },
-        random_seed=args.random_seed
+        random_seed=args.random_seed,
+        show_indices=True,
     )
 
     # model = FixMatchClassifier(**config)
