@@ -56,8 +56,8 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         max_probs, targets = probs.max(dim=-1)
 
         β = self.ŷ.bincount()
-        β /= β.max()
-        β /= 2 - β
+        β = β / β.max()
+        β = β / (2 - β)
         masks = max_probs > self.threshold * β[targets]
 
         ŷ = torch.where(max_probs > self.threshold, targets, -1)
@@ -69,7 +69,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
 
         loss = torch.nn.functional.cross_entropy(
             logits_s, targets, reduction='none') * masks
-        self.𝜇ₘₐₛₖ = masks.mean().detach()
+        self.𝜇ₘₐₛₖ = masks.float().mean().detach()
 
         if self.reduction == 'mean':
             return loss.mean()
@@ -196,5 +196,6 @@ class FlexMatchClassifier(FixMatchClassifier):
         super().__init__(**kwargs)
         self.criterionᵤ = FlexMatchCrossEntropy(
             num_classes=self.hparams.model['backbone']['num_classes'],
+            num_samples=50000,
             **self.hparams.model['loss_u']
         )
