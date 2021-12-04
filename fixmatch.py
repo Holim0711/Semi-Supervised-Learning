@@ -16,7 +16,7 @@ class AveragedModelWithBuffers(torch.optim.swa_utils.AveragedModel):
 
 
 class FixMatchCrossEntropy(torch.nn.Module):
-    def __init__(self, temperature=1.0, threshold=0.95, reduction='mean'):
+    def __init__(self, temperature, threshold, reduction='mean'):
         super().__init__()
         self.threshold = threshold
         self.temperature = temperature
@@ -39,11 +39,16 @@ class FixMatchCrossEntropy(torch.nn.Module):
         return loss
 
 
-class FlexMatchCrossEntropy(FixMatchCrossEntropy):
-    def __init__(self, num_classes, num_samples, **kwargs):
-        super().__init__(**kwargs)
+class FlexMatchCrossEntropy(torch.nn.Module):
+    def __init__(self, num_classes, num_samples,
+                 temperature, threshold, reduction='mean'):
+        super().__init__()
         self.num_classes = num_classes
         self.num_samples = num_samples
+        self.threshold = threshold
+        self.temperature = temperature
+        self.reduction = reduction
+        self.𝜇ₘₐₛₖ = None
         self.register_buffer('ŷ', torch.tensor([num_classes] * num_samples))
 
     def all_gather(self, x, world_size):
@@ -58,7 +63,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         β = self.ŷ.bincount()
         β = β / β.max()
         β = β / (2 - β)
-        masks = max_probs > self.threshold * β[targets]
+        masks = (max_probs > self.threshold * β[targets]).float()
 
         ŷ = torch.where(max_probs > self.threshold, targets, -1)
         if torch.distributed.is_initialized():
@@ -114,7 +119,7 @@ class FixMatchClassifier(pl.LightningModule):
         self.ema = AveragedModelWithBuffers(self.model, avg_fn=avg_fn)
 
     def training_step(self, batch, batch_idx):
-        iₗ, (xₗ, yₗ) = batch['labeled']
+        xₗ, yₗ = batch['labeled']
         iᵤ, ((ˢxᵤ, ʷxᵤ), _) = batch['unlabeled']
 
         z = self.model(torch.cat((xₗ, ˢxᵤ, ʷxᵤ)))

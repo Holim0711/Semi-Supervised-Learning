@@ -52,7 +52,7 @@ def train(config, args):
             'val': config['dataset']['batch_sizes']['val'],
         },
         random_seed=args.random_seed,
-        show_indices=True,
+        show_sample_indices=True,
     )
 
     # model = FixMatchClassifier(**config)
@@ -76,7 +76,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('mode', choices=['train', 'test'])
     parser.add_argument('config', type=str)
-    parser.add_argument('--n', type=int)
+    parser.add_argument('--n', type=int, default=40)
     parser.add_argument('--random_seed', type=int, default=1234)
     parser.add_argument('--ckpt_path', type=str)
     parser = Trainer.add_argparse_args(parser)
@@ -87,8 +87,6 @@ def main():
         config = json.load(file)
 
     if args.mode == 'train':
-        assert args.n > 0
-        assert args.random_seed
         train(config, args)
     else:
         assert args.ckpt_path
