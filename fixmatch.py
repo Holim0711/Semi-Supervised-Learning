@@ -1,8 +1,9 @@
 import torch
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from weaver.models import get_model
-from weaver.optimizers import get_optim, exclude_wd
+from weaver.models import get_classifier
+from weaver.optimizers import get_optim
+from weaver.optimizers.utils import exclude_wd
 from weaver.schedulers import get_sched
 
 __all__ = ['FixMatchClassifier', 'FlexMatchClassifier']
@@ -88,7 +89,7 @@ class FixMatchClassifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.model = get_model(**self.hparams.model['backbone'])
+        self.model = get_classifier(**self.hparams.model['backbone'])
         change_bn(self.model, self.hparams.model['momentum'])
         replace_relu(self.model)
         self.criterionₗ = torch.nn.CrossEntropyLoss()
@@ -159,24 +160,11 @@ class FixMatchClassifier(pl.LightningModule):
     def test_epoch_end(self, outputs):
         return self.validation_epoch_end(outputs)
 
-    @property
-    def num_devices(self) -> int:
-        t = self.trainer
-        return t.num_nodes * max(t.num_processes, t.num_gpus, t.tpu_cores or 0)
-
-    @property
-    def steps_per_epoch(self) -> int:
-        num_iter = len(self.train_dataloader()['unlabeled'])
-        num_accum = self.trainer.accumulate_grad_batches
-        return num_iter // (num_accum * self.num_devices)
-
     def configure_optimizers(self):
         params = exclude_wd(self.model)
         optim = get_optim(params, **self.hparams.optimizer)
         sched = get_sched(optim, **self.hparams.scheduler)
-        sched.extend(self.steps_per_epoch)
-        return {'optimizer': optim,
-                'lr_scheduler': {'scheduler': sched, 'interval': 'step'}}
+        return {'optimizer': optim, 'lr_scheduler': {'scheduler': sched}}
 
 
 class FlexMatchClassifier(FixMatchClassifier):

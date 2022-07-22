@@ -8,9 +8,9 @@ from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.utilities.seed import seed_everything
 
 from fixmatch import *
-from weaver.transforms import get_trfms
+from weaver.transforms import get_xform
 from weaver.transforms.twin_transforms import NqTwinTransform
-from dual_cifar import SemiCIFAR10, SemiCIFAR100
+from dataset import SemiCIFAR10, SemiCIFAR100
 
 DataModule = {
     'cifar10': SemiCIFAR10,
@@ -32,11 +32,11 @@ def train(config, args):
         ]
     )
 
-    nd = trainer.num_nodes * trainer.num_gpus
+    N = trainer.num_nodes * trainer.num_devices
 
-    transform_w = get_trfms(config['transform']['weak'])
-    transform_s = get_trfms(config['transform']['strong'])
-    transform_v = get_trfms(config['transform']['val'])
+    transform_w = get_xform('Compose', transforms=config['transform']['weak'])
+    transform_s = get_xform('Compose', transforms=config['transform']['str'])
+    transform_v = get_xform('Compose', transforms=config['transform']['val'])
 
     dm = DataModule[config['dataset']['name']](
         os.path.join('data', config['dataset']['name']),
@@ -47,15 +47,15 @@ def train(config, args):
             'val': transform_v
         },
         batch_sizes={
-            'labeled': config['dataset']['batch_sizes']['labeled'] // nd,
-            'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // nd,
+            'labeled': config['dataset']['batch_sizes']['labeled'] // N,
+            'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // N,
             'val': config['dataset']['batch_sizes']['val'],
         },
         random_seed=args.random_seed
     )
 
-    # model = FixMatchClassifier(**config)
-    model = FlexMatchClassifier(**config)
+    model = FixMatchClassifier(**config)
+    # model = FlexMatchClassifier(**config)
     trainer.fit(model, dm)
 
 
@@ -64,7 +64,7 @@ def test(config, args):
     dm = DataModule[config['dataset']['name']](
         os.path.join('data', config['dataset']['name']),
         n=0,
-        transforms={'val': get_trfms(config['transform']['val'])},
+        transforms={'val': get_xform(config['transform']['val'])},
         batch_sizes={'val': config['dataset']['batch_sizes']['val']},
     )
     model = FixMatchClassifier.load_from_checkpoint(args.ckpt_path)
