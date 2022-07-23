@@ -18,16 +18,15 @@ DataModule = {
 }
 
 
-def train(config, args):
-    config['dataset']['n'] = args.n
-    config['dataset']['random_seed'] = args.random_seed
-    seed_everything(args.random_seed)
+def train(args):
+    config = args.config
+    seed_everything(config['random_seed'])
 
     trainer = Trainer.from_argparse_args(
         args,
         logger=TensorBoardLogger('logs', config['dataset']['name']),
         callbacks=[
-            ModelCheckpoint(save_top_k=1, monitor='val/acc', mode='max'),
+            ModelCheckpoint(save_top_k=1, monitor='val/acc/ema', mode='max'),
             LearningRateMonitor(),
         ]
     )
@@ -40,7 +39,7 @@ def train(config, args):
 
     dm = DataModule[config['dataset']['name']](
         os.path.join('data', config['dataset']['name']),
-        args.n,
+        config['dataset']['num_labeled'],
         transforms={
             'labeled': transform_w,
             'unlabeled': NqTwinTransform(transform_s, transform_w),
@@ -51,7 +50,7 @@ def train(config, args):
             'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // N,
             'val': config['dataset']['batch_sizes']['val'],
         },
-        random_seed=args.random_seed
+        random_seed=config['dataset']['random_seed']
     )
 
     model = FixMatchClassifier(**config)
@@ -59,40 +58,22 @@ def train(config, args):
     trainer.fit(model, dm)
 
 
-def test(config, args):
-    trainer = Trainer.from_argparse_args(args, logger=False)
-    dm = DataModule[config['dataset']['name']](
-        os.path.join('data', config['dataset']['name']),
-        n=0,
-        transforms={'val': get_xform(config['transform']['val'])},
-        batch_sizes={'val': config['dataset']['batch_sizes']['val']},
-    )
-    model = FixMatchClassifier.load_from_checkpoint(args.ckpt_path)
-    trainer.test(model, dm)
-
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=['train', 'test'])
-    parser.add_argument('config', type=str)
-    parser.add_argument('--n', type=int)
-    parser.add_argument('--random_seed', type=int, default=1234)
-    parser.add_argument('--ckpt_path', type=str)
-    parser = Trainer.add_argparse_args(parser)
-
-    args = parser.parse_args()
-
-    with open(args.config) as file:
-        config = json.load(file)
-
-    if args.mode == 'train':
-        assert args.n > 0
-        assert args.random_seed
-        train(config, args)
-    else:
-        assert args.ckpt_path
-        test(config, args)
+def read_json(path):
+    return json.load(open(path))
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('config', type=read_json)
+    parser.add_argument('--data.num_labeled', type=int)
+    parser.add_argument('--data.random_seed', type=int)
+    parser.add_argument('--random_seed', type=int)
+    parser = Trainer.add_argparse_args(parser)
+
+    args = parser.parse_args()
+    args.config['dataset'].setdefault('num_labeled',
+                                      getattr(args, 'data.num_labeled'))
+    args.config['dataset'].setdefault('random_seed',
+                                      getattr(args, 'data.random_seed'))
+    args.config.setdefault('random_seed', args.random_seed)
+    train(args)
