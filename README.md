@@ -29,6 +29,11 @@ python run.py test configs/cifar10.json --gpus 1 --ckpt_path {path_to_checkpoint
 | Acc | 93.73 | 95.64 | 96.15 |
 
 ### CIFAR100
+
+```
+python train.py configs/fixmatch/cifar100.json --gpus 4 --strategy ddp --sync_batchnorm --max_epoch 10000 --random_seed 0
+```
+
 |     |   4   |   25  |  100  |
 |:---:| :---: | :---: | :---: |
 | Acc |  WIP  |  WIP  |  WIP  |
