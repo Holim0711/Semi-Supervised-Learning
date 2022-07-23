@@ -95,7 +95,8 @@ class FixMatchClassifier(pl.LightningModule):
         self.criterionₗ = torch.nn.CrossEntropyLoss()
         self.criterionᵤ = FixMatchCrossEntropy(**self.hparams.model['loss_u'])
         self.train_acc = Accuracy()
-        self.valid_acc = Accuracy()
+        self.valid_cur_acc = Accuracy()
+        self.valid_ema_acc = Accuracy()
 
         def avg_fn(averaged_model_parameter, model_parameter, num_averaged):
             α = self.hparams.model['momentum']
@@ -141,18 +142,26 @@ class FixMatchClassifier(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
-        z = self.ema(x)
-        loss = self.criterionₗ(z, y)
-        self.valid_acc.update(z.softmax(dim=1), y)
-        return {'loss': loss}
+        cur_z = self.model(x)
+        cur_loss = self.criterionₗ(cur_z, y)
+        self.valid_cur_acc.update(cur_z.softmax(dim=1), y)
+        ema_z = self.ema(x)
+        ema_loss = self.criterionₗ(ema_z, y)
+        self.valid_ema_acc.update(ema_z.softmax(dim=1), y)
+        return {'loss/cur': cur_loss, 'loss/ema': ema_loss}
 
     def validation_epoch_end(self, outputs):
-        loss = torch.stack([x['loss'] for x in outputs]).mean()
-        self.log('val/loss', loss, sync_dist=True)
+        loss = torch.stack([x['loss/cur'] for x in outputs]).mean()
+        self.log('val/loss/cur', loss, sync_dist=True)
+        loss = torch.stack([x['loss/ema'] for x in outputs]).mean()
+        self.log('val/loss/ema', loss, sync_dist=True)
 
-        acc = self.valid_acc.compute()
-        self.log('val/acc', acc, rank_zero_only=True)
-        self.valid_acc.reset()
+        acc = self.valid_cur_acc.compute()
+        self.log('val/acc/cur', acc, rank_zero_only=True)
+        self.valid_cur_acc.reset()
+        acc = self.valid_ema_acc.compute()
+        self.log('val/acc/ema', acc, rank_zero_only=True)
+        self.valid_ema_acc.reset()
 
     def test_step(self, batch, batch_idx):
         return self.validation_step(batch, batch_idx)
