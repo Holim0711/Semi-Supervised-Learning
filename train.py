@@ -7,15 +7,17 @@ from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from pytorch_lightning.utilities.seed import seed_everything
 
-from fixmatch import *
 from weaver.transforms import get_xform
 from weaver.transforms.twin_transforms import NqTwinTransform
-from dataset import SemiCIFAR10, SemiCIFAR100
 
-DataModule = {
-    'cifar10': SemiCIFAR10,
-    'cifar100': SemiCIFAR100,
-}
+from dataset import (
+    SemiCIFAR10,
+    SemiCIFAR100,
+)
+from methods import (
+    FixMatchClassifier,
+    FlexMatchClassifier,
+)
 
 
 def train(args):
@@ -37,7 +39,12 @@ def train(args):
     transform_s = get_xform('Compose', transforms=config['transform']['str'])
     transform_v = get_xform('Compose', transforms=config['transform']['val'])
 
-    dm = DataModule[config['dataset']['name']](
+    Dataset = {
+        'cifar10': SemiCIFAR10,
+        'cifar100': SemiCIFAR100,
+    }[config['dataset']['name']]
+
+    dm = Dataset(
         os.path.join('data', config['dataset']['name']),
         config['dataset']['num_labeled'],
         transforms={
@@ -53,8 +60,11 @@ def train(args):
         random_seed=config['dataset']['random_seed']
     )
 
-    model = FixMatchClassifier(**config)
-    # model = FlexMatchClassifier(**config)
+    if config['method'] == 'fixmatch':
+        model = FixMatchClassifier(**config)
+    elif config['method'] == 'flexmatch':
+        model = FlexMatchClassifier(**config)
+
     trainer.fit(model, dm)
 
 

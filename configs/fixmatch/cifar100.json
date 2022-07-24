@@ -1,4 +1,5 @@
 {
+    "method": "fixmatch",
     "transform": {
         "weak": [
             {"name": "RandomHorizontalFlip"},

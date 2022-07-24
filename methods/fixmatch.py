@@ -6,7 +6,7 @@ from weaver.optimizers import get_optim
 from weaver.optimizers.utils import exclude_wd
 from weaver.schedulers import get_sched
 
-__all__ = ['FixMatchClassifier', 'FlexMatchClassifier']
+__all__ = ['FixMatchClassifier']
 
 
 class AveragedModelWithBuffers(torch.optim.swa_utils.AveragedModel):
