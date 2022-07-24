@@ -33,7 +33,7 @@
         "momentum": 0.999
     },
     "dataset": {
-        "name": "cifar100",
+        "name": "CIFAR100",
         "num_labeled": 400,
         "random_seed": 0,
         "batch_sizes": {

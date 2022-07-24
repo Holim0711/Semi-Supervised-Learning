@@ -40,8 +40,8 @@ def train(args):
     transform_v = get_xform('Compose', transforms=config['transform']['val'])
 
     Dataset = {
-        'cifar10': SemiCIFAR10,
-        'cifar100': SemiCIFAR100,
+        'CIFAR10': SemiCIFAR10,
+        'CIFAR100': SemiCIFAR100,
     }[config['dataset']['name']]
 
     dm = Dataset(
@@ -68,13 +68,9 @@ def train(args):
     trainer.fit(model, dm)
 
 
-def read_json(path):
-    return json.load(open(path))
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('config', type=read_json)
+    parser.add_argument('config', type=lambda x: json.load(open(x)))
     parser.add_argument('--data.num_labeled', type=int)
     parser.add_argument('--data.random_seed', type=int)
     parser.add_argument('--random_seed', type=int)
