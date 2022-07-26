@@ -77,9 +77,10 @@ if __name__ == "__main__":
     parser = Trainer.add_argparse_args(parser)
 
     args = parser.parse_args()
-    args.config['dataset'].setdefault('num_labeled',
-                                      getattr(args, 'dataset.num_labeled'))
-    args.config['dataset'].setdefault('random_seed',
-                                      getattr(args, 'dataset.random_seed'))
-    args.config.setdefault('random_seed', args.random_seed)
+    if (v := getattr(args, 'dataset.num_labeled')) is not None:
+        args.config['dataset']['num_labeled'] = v
+    if (v := getattr(args, 'dataset.random_seed')) is not None:
+        args.config['dataset']['random_seed'] = v
+    if (v := getattr(args, 'random_seed')) is not None:
+        args.config['random_seed'] = v
     train(args)
