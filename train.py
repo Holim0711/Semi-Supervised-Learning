@@ -71,15 +71,15 @@ def train(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=lambda x: json.load(open(x)))
-    parser.add_argument('--data.num_labeled', type=int)
-    parser.add_argument('--data.random_seed', type=int)
+    parser.add_argument('--dataset.num_labeled', type=int)
+    parser.add_argument('--dataset.random_seed', type=int)
     parser.add_argument('--random_seed', type=int)
     parser = Trainer.add_argparse_args(parser)
 
     args = parser.parse_args()
     args.config['dataset'].setdefault('num_labeled',
-                                      getattr(args, 'data.num_labeled'))
+                                      getattr(args, 'dataset.num_labeled'))
     args.config['dataset'].setdefault('random_seed',
-                                      getattr(args, 'data.random_seed'))
+                                      getattr(args, 'dataset.random_seed'))
     args.config.setdefault('random_seed', args.random_seed)
     train(args)

@@ -11,22 +11,16 @@ pip install pytorch-lightning
 
 ## Training
 ```
-python run.py train configs/cifar10.json --n 40 --gpus 1 --max_epochs 9362
-python run.py train configs/cifar10.json --n 250 --gpus 1 --max_epochs 9362
-python run.py train configs/cifar10.json --n 4000 --gpus 2 --sync_batchnorm --accelerator 'ddp' --max_epochs 9362
-```
-
-## Testing
-```
-python run.py test configs/cifar10.json --gpus 1 --ckpt_path {path_to_checkpoint.ckpt}
+python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0
+python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --data.num_labeled 100
 ```
 
 ## Results
 
 ### CIFAR10
-|     |   4   |   25  |  400  |
-|:---:| :---: | :---: | :---: |
-| Acc | 93.73 | 95.64 | 96.15 |
+|     |   40  |  100  |
+|:---:| :---: | :---: |
+| Acc |  WIP  |  WIP  |
 
 ### CIFAR100
 
@@ -34,9 +28,9 @@ python run.py test configs/cifar10.json --gpus 1 --ckpt_path {path_to_checkpoint
 python train.py configs/fixmatch/cifar100.json --gpus 4 --strategy ddp --sync_batchnorm --max_epoch 10000 --random_seed 0
 ```
 
-|     |   4   |   25  |  100  |
-|:---:| :---: | :---: | :---: |
-| Acc |  WIP  |  WIP  |  WIP  |
+|     |  400  |  1000 |
+|:---:| :---: | :---: |
+| Acc |  WIP  |  WIP  |
 
 
 ## References
