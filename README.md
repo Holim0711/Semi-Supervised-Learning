@@ -11,8 +11,8 @@
 ```
 python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic
 python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic --dataset.num_labeled 100
-python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic
-python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic --dataset.num_labeled 100
+python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0
+python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --dataset.num_labeled 100
 ```
 
 ### CIFAR100
