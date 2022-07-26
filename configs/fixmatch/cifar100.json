@@ -30,7 +30,8 @@
             "temperature": 1.0,
             "threshold": 0.95
         },
-        "momentum": 0.999
+        "ema": 0.999,
+        "lrelu": 0.1
     },
     "dataset": {
         "name": "CIFAR100",

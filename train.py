@@ -57,7 +57,8 @@ def train(args):
             'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // N,
             'val': config['dataset']['batch_sizes']['val'],
         },
-        random_seed=config['dataset']['random_seed']
+        random_seed=config['dataset']['random_seed'],
+        enum_unlabeled=True
     )
 
     if config['method'] == 'fixmatch':
