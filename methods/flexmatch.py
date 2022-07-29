@@ -11,12 +11,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         self.num_samples = num_samples
         self.register_buffer('ŷ', torch.tensor([num_classes] * num_samples))
 
-    def all_gather(self, x, world_size):
-        x_list = [torch.zeros_like(x) for _ in range(world_size)]
-        torch.distributed.all_gather(x_list, x)
-        return torch.hstack(x_list)
-
-    def forward(self, logits_s, logits_w, indices):
+    def forward(self, logits_s, logits_w):
         probs = torch.softmax(logits_w / self.temperature, dim=-1)
         max_probs, targets = probs.max(dim=-1)
 
@@ -25,12 +20,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         β = β / (2 - β)
         masks = (max_probs > self.threshold * β[targets]).float()
 
-        ŷ = torch.where(max_probs > self.threshold, targets, -1)
-        if torch.distributed.is_initialized():
-            world_size = torch.distributed.get_world_size()
-            ŷ = self.all_gather(ŷ, world_size)
-            indices = self.all_gather(indices, world_size)
-        self.ŷ[indices[ŷ != -1]] = ŷ[ŷ != -1]
+        self.tmp_ŷ = torch.where(max_probs > self.threshold, targets, -1)
 
         loss = torch.nn.functional.cross_entropy(
             logits_s, targets, reduction='none') * masks
@@ -54,3 +44,10 @@ class FlexMatchClassifier(FixMatchClassifier):
             }[self.hparams.dataset['name']],
             **self.hparams.model['loss_u']
         )
+
+    def training_step(self, batch, batch_idx):
+        result = super().training_step(batch, batch_idx)
+        i = self.all_gather(batch['unlabeled'][0]).flatten(end_dim=1)
+        ŷ = self.all_gather(self.criterionᵤ.tmp_ŷ).flatten(end_dim=1)
+        self.criterionᵤ.ŷ[i[ŷ != -1]] = ŷ[ŷ != -1]
+        return result

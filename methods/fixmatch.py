@@ -18,7 +18,7 @@ class FixMatchCrossEntropy(torch.nn.Module):
         self.reduction = reduction
         self.𝜇ₘₐₛₖ = None
 
-    def forward(self, logits_s, logits_w, indices):
+    def forward(self, logits_s, logits_w):
         probs = torch.softmax(logits_w / self.temperature, dim=-1)
         max_probs, targets = probs.max(dim=-1)
         masks = (max_probs > self.threshold).float()
@@ -63,7 +63,7 @@ class FixMatchClassifier(pl.LightningModule):
         del z
 
         lossₗ = self.criterionₗ(zₗ, yₗ)
-        lossᵤ = self.criterionᵤ(ˢzᵤ, ʷzᵤ.detach(), iᵤ)
+        lossᵤ = self.criterionᵤ(ˢzᵤ, ʷzᵤ.detach())
         loss = lossₗ + lossᵤ
 
         self.train_acc.update(zₗ.softmax(dim=1), yₗ)
