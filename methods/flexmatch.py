@@ -48,10 +48,12 @@ class FlexMatchClassifier(FixMatchClassifier):
 
     def training_step(self, batch, batch_idx):
         result = super().training_step(batch, batch_idx)
-        i = batch['unlabeled'][0].cpu()
-        ŷ = self.criterionᵤ.ŷ.cpu()
+        i = batch['unlabeled'][0]
+        ŷ = self.criterionᵤ.ŷ
         if torch.distributed.is_initialized():
             i = self.all_gather(i).flatten(end_dim=1)
             ŷ = self.all_gather(ŷ).flatten(end_dim=1)
+        i = i.cpu()
+        ŷ = ŷ.cpu()
         self.criterionᵤ.Ŷ[i[ŷ != -1]] = ŷ[ŷ != -1]
         return result
