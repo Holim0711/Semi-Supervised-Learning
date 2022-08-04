@@ -9,7 +9,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         super().__init__(*args, **kwargs)
         self.num_classes = num_classes
         self.num_samples = num_samples
-        self.register_buffer('Ŷ', torch.tensor([num_classes] * num_samples))
+        self.Ŷ = torch.tensor([num_classes] * num_samples)
 
     def forward(self, logits_s, logits_w):
         probs = torch.softmax(logits_w / self.temperature, dim=-1)
@@ -18,6 +18,7 @@ class FlexMatchCrossEntropy(FixMatchCrossEntropy):
         β = self.Ŷ.bincount()
         β = β / β.max()
         β = β / (2 - β)
+        β = β.to(targets.device)
         masks = (max_probs > self.threshold * β[targets]).float()
 
         self.ŷ = torch.where(max_probs > self.threshold, targets, -1)
@@ -47,8 +48,8 @@ class FlexMatchClassifier(FixMatchClassifier):
 
     def training_step(self, batch, batch_idx):
         result = super().training_step(batch, batch_idx)
-        i = batch['unlabeled'][0]
-        ŷ = self.criterionᵤ.ŷ
+        i = batch['unlabeled'][0].cpu()
+        ŷ = self.criterionᵤ.ŷ.cpu()
         if torch.distributed.is_initialized():
             i = self.all_gather(i).flatten(end_dim=1)
             ŷ = self.all_gather(ŷ).flatten(end_dim=1)
