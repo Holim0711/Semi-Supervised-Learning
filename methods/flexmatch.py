@@ -1,0 +1,53 @@
+import torch
+from .fixmatch import FixMatchCrossEntropy, FixMatchClassifier
+
+__all__ = ['FlexMatchClassifier']
+
+
+class FlexMatchCrossEntropy(FixMatchCrossEntropy):
+    def __init__(self, num_classes, num_samples, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.num_classes = num_classes
+        self.num_samples = num_samples
+        self.register_buffer('ŷ', torch.tensor([num_classes] * num_samples))
+
+    def forward(self, logits_s, logits_w):
+        probs = torch.softmax(logits_w / self.temperature, dim=-1)
+        max_probs, targets = probs.max(dim=-1)
+
+        β = self.ŷ.bincount()
+        β = β / β.max()
+        β = β / (2 - β)
+        masks = (max_probs > self.threshold * β[targets]).float()
+
+        self.tmp_ŷ = torch.where(max_probs > self.threshold, targets, -1)
+
+        loss = torch.nn.functional.cross_entropy(
+            logits_s, targets, reduction='none') * masks
+        self.𝜇ₘₐₛₖ = masks.mean().detach()
+
+        if self.reduction == 'mean':
+            return loss.mean()
+        elif self.reduction == 'sum':
+            return loss.sum()
+        return loss
+
+
+class FlexMatchClassifier(FixMatchClassifier):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.criterionᵤ = FlexMatchCrossEntropy(
+            self.hparams.model['backbone']['num_classes'],
+            {
+                'CIFAR10': 50000,
+                'CIFAR100': 50000,
+            }[self.hparams.dataset['name']],
+            **self.hparams.model['loss_u']
+        )
+
+    def training_step(self, batch, batch_idx):
+        result = super().training_step(batch, batch_idx)
+        i = self.all_gather(batch['unlabeled'][0]).flatten(end_dim=1)
+        ŷ = self.all_gather(self.criterionᵤ.tmp_ŷ).flatten(end_dim=1)
+        self.criterionᵤ.ŷ[i[ŷ != -1]] = ŷ[ŷ != -1]
+        return result
