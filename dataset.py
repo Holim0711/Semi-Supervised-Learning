@@ -1,54 +1,24 @@
 import os
 import warnings
 from math import ceil
-import numpy
 from typing import Callable, Optional
+import numpy as np
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import Dataset, Subset, ConcatDataset, DataLoader
 from torchvision.transforms import ToTensor
 from torchvision.datasets import CIFAR10, CIFAR100
 
-CIFAR = {10: CIFAR10, 100: CIFAR100}
 
-CLASSES = {
-    10: [
-        'airplane', 'automobile', 'bird', 'cat', 'deer',
-        'dog', 'frog', 'horse', 'ship', 'truck'
-    ],
-    100: [
-        'beaver', 'dolphin', 'otter', 'seal', 'whale',
-        'aquarium fish', 'flatfish', 'ray', 'shark', 'trout',
-        'orchids', 'poppies', 'roses', 'sunflowers', 'tulips',
-        'bottles', 'bowls', 'cans', 'cups', 'plates',
-        'apples', 'mushrooms', 'oranges', 'pears', 'sweet peppers',
-        'clock', 'computer keyboard', 'lamp', 'telephone', 'television',
-        'bed', 'chair', 'couch', 'table', 'wardrobe',
-        'bee', 'beetle', 'butterfly', 'caterpillar', 'cockroach',
-        'bear', 'leopard', 'lion', 'tiger', 'wolf',
-        'bridge', 'castle', 'house', 'road', 'skyscraper',
-        'cloud', 'forest', 'mountain', 'plain', 'sea',
-        'camel', 'cattle', 'chimpanzee', 'elephant', 'kangaroo',
-        'fox', 'porcupine', 'possum', 'raccoon', 'skunk',
-        'crab', 'lobster', 'snail', 'spider', 'worm',
-        'baby', 'boy', 'girl', 'man', 'woman',
-        'crocodile', 'dinosaur', 'lizard', 'snake', 'turtle',
-        'hamster', 'mouse', 'rabbit', 'shrew', 'squirrel',
-        'maple', 'oak', 'palm', 'pine', 'willow',
-        'bicycle', 'bus', 'motorcycle', 'pickup truck', 'train',
-        'lawn-mower', 'rocket', 'streetcar', 'tank', 'tractor',
-    ]
-}
-
-
-def random_select(y, N, random_state):
+def random_select(y, N, seed=None):
     """ Select a total of 'N' indices equally for each class """
-    y = numpy.array(y)
-    C = numpy.unique(y)
+    y = np.array(y)
+    C = np.unique(y)
     n = N // len(C)
+    random_state = np.random.RandomState(seed)
 
     random_I = []
     for c in C:
-        Iᶜ = numpy.where(y == c)[0]
+        Iᶜ = np.where(y == c)[0]
         random_Iᶜ = random_state.choice(Iᶜ, n, replace=False)
         random_I.extend(random_Iᶜ)
     return random_I
@@ -65,107 +35,110 @@ class IndexedDataset(Dataset):
         return index, self.dataset[index]
 
 
-class SemiCIFAR(LightningDataModule):
+class UnlabeledDataset(Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
 
-    splits = ['labeled', 'unlabeled', 'val']
-    num_classes = None
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        x, _ = self.dataset[index]
+        return x
+
+
+class SemiDataModule(LightningDataModule):
+
+    Dataset = None
 
     def __init__(
         self,
         root: str,
         num_labeled: int,
+        random_seed: int = 0,
         transforms: dict[str, Callable] = {},
         batch_sizes: dict[str, int] = {},
-        random_seed: Optional[int] = 0,
-        enum_unlabeled: bool = False,
-        pure_unlabeled: bool = False,
+        expand_labeled: bool = False,
+        enumerate_unlabeled: bool = False,
     ):
         super().__init__()
-        self.CIFAR = CIFAR[self.num_classes]
-        self.classes = CLASSES[self.num_classes]
-
         self.root = root
         self.num_labeled = num_labeled
-        self.transforms = [transforms.get(k, ToTensor()) for k in self.splits]
-        self.batch_sizes = {k: batch_sizes.get(k, 1) for k in self.splits}
         self.random_seed = random_seed
-        self.enum_unlabeled = enum_unlabeled
-        self.pure_unlabeled = pure_unlabeled
+
+        splits = ['labeled', 'unlabeled', 'val']
+        self.transforms = {k: transforms.get(k, ToTensor()) for k in splits}
+        self.batch_sizes = {k: batch_sizes.get(k, 1) for k in splits}
 
         for k in transforms:
-            if k not in self.splits:
+            if k not in splits:
                 warnings.warn(f"'{k}' in transforms is ignored")
         for k in batch_sizes:
-            if k not in self.splits:
+            if k not in splits:
                 warnings.warn(f"'{k}' in batch_sizes is ignored")
 
+        self.expand_labeled = expand_labeled
+        self.enumerate_unlabeled = enumerate_unlabeled
+
     def prepare_data(self):
-        self.CIFAR(self.root, download=True)
+        self.Dataset(self.root, download=True)
+
+    def get_dataset(self, split: str, transform: Optional[Callable] = None):
+        if split == 'labeled':
+            d = self.Dataset(self.root, transform=transform)
+            i = random_select(d.targets, self.num_labeled, self.random_seed)
+            return Subset(d, i)
+        elif split == 'unlabeled':
+            return self.Dataset(self.root, transform=transform)
+        elif split == 'val':
+            return self.Dataset(self.root, train=False, transform=transform)
+
+        raise ValueError(f'Unknwon dataset split: {split}')
 
     def setup(self, stage=None):
-        random_state = numpy.random.RandomState(self.random_seed)
+        P = self.get_dataset('labeled', self.transforms['labeled'])
+        U = self.get_dataset('unlabeled', self.transforms['unlabeled'])
+        V = self.get_dataset('val', self.transforms['val'])
 
-        P = self.CIFAR(self.root, transform=self.transforms[0])
-        U = self.CIFAR(self.root, transform=self.transforms[1])
-        V = self.CIFAR(self.root, train=False, transform=self.transforms[2])
+        if self.expand_labeled:
+            m = ((len(U) * self.batch_sizes['labeled']) /
+                 (len(P) * self.batch_sizes['unlabeled'] * 2))
+            P = ConcatDataset([P] * max(ceil(m), 1))
 
-        indices = random_select(P.targets, self.num_labeled, random_state)
-        P = Subset(P, indices)
-
-        self.setup_unlabeled(U, random_state)
-
-        try:
-            m = ((len(U) * self.batch_sizes[self.splits[0]]) /
-                 (len(P) * self.batch_sizes[self.splits[1]] * 2))
-        except ZeroDivisionError:
-            m = 1
-
-        P = ConcatDataset([P] * max(ceil(m), 1))
-
-        if self.enum_unlabeled:
+        if self.enumerate_unlabeled:
             U = IndexedDataset(U)
 
-        if self.pure_unlabeled:
-            indices = set(indices)
-            indices = [x for x in range(len(U)) if x not in indices]
-            U = Subset(U, indices)
+        self._datasets = {'labeled': P, 'unlabeled': U, 'val': V}
 
-        self.datasets = dict(zip(self.splits, [P, U, V]))
-
-    def setup_unlabeled(self, U, random_state):
-        pass
-
-    def dataloader(
-        self, k: str,
+    def get_dataloader(
+        self,
+        split: str,
         shuffle: bool = True,
         num_workers: int = os.cpu_count(),
         pin_memory: bool = True
     ):
         return DataLoader(
-            self.datasets[k],
-            self.batch_sizes[k],
+            self._datasets[split],
+            self.batch_sizes[split],
             shuffle=shuffle,
             num_workers=num_workers,
             pin_memory=pin_memory,
         )
 
     def train_dataloader(self):
-        if self.num_labeled and self.batch_sizes[self.splits[0]]:
-            return {self.splits[0]: self.dataloader(self.splits[0]),
-                    self.splits[1]: self.dataloader(self.splits[1])}
-        else:
-            return self.dataloader(self.splits[1])
+        return {'labeled': self.get_dataloader('labeled'),
+                'unlabeled': self.get_dataloader('unlabeled')}
 
     def val_dataloader(self):
-        return self.dataloader(self.splits[2], shuffle=False)
+        return self.get_dataloader('val', shuffle=False)
 
     def test_dataloader(self):
         return self.val_dataloader()
 
 
-class SemiCIFAR10(SemiCIFAR):
-    num_classes = 10
+class SemiCIFAR10(SemiDataModule):
+    Dataset = CIFAR10
 
 
-class SemiCIFAR100(SemiCIFAR):
-    num_classes = 100
+class SemiCIFAR100(SemiDataModule):
+    Dataset = CIFAR100
