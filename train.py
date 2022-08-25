@@ -58,7 +58,8 @@ def train(args):
             'val': config['dataset']['batch_sizes']['val'],
         },
         random_seed=config['dataset']['random_seed'],
-        enum_unlabeled=True
+        expand_labeled=True,
+        enumerate_unlabeled=True,
     )
 
     if config['method'] == 'fixmatch':

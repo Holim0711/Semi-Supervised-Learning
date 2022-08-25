@@ -38,7 +38,6 @@ def test(args):
             'val': config['dataset']['batch_sizes']['val'],
         },
         random_seed=config['dataset']['random_seed'],
-        enum_unlabeled=True
     )
 
     if config['method'] == 'fixmatch':
