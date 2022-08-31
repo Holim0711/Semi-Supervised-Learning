@@ -29,9 +29,9 @@ python train.py configs/flexmatch/cifar100.json --gpus 4 --strategy ddp --sync_b
 |                   | 40           | 250          |
 | :---:             | :---:        | :---:        |
 | FixMatch (paper)  | 86.19 ± 3.37 | 94.93 ± 0.65 |
-| FixMatch (this)   | 93.84        | -            |
+| FixMatch (this)   | -            | -            |
 | FlexMatch (paper) | 95.03 ± 0.06 | 95.02 ± 0.09 |
-| FlexMatch (this)  | 95.36        | -            |
+| FlexMatch (this)  | 95.63        | -            |
 
 ### CIFAR100
 |                   | 400          | 2500         |
@@ -39,4 +39,4 @@ python train.py configs/flexmatch/cifar100.json --gpus 4 --strategy ddp --sync_b
 | FixMatch (paper)  | 51.15 ± 1.75 | 71.71 ± 0.11 |
 | FixMatch (this)   | -            | -            |
 | FlexMatch (paper) | 60.06 ± 1.62 | 73.51 ± 0.20 |
-| FlexMatch (this)  | 58.51 (↑)    | -            |
+| FlexMatch (this)  | -            | -            |
