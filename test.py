@@ -3,8 +3,8 @@ import json
 import argparse
 
 from pytorch_lightning import Trainer
-
-from weaver.transforms import get_xform
+from torchvision.transforms import Compose
+from weaver import get_transforms
 
 from dataset import (
     SemiCIFAR10,
@@ -21,7 +21,7 @@ def test(args):
 
     trainer = Trainer.from_argparse_args(args, logger=False)
 
-    transform_v = get_xform('Compose', transforms=config['transform']['val'])
+    transform_v = Compose(get_transforms(config['transform']['val']))
 
     Dataset = {
         'CIFAR10': SemiCIFAR10,

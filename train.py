@@ -5,10 +5,9 @@ import argparse
 from pytorch_lightning import Trainer
 from pytorch_lightning.loggers import TensorBoardLogger
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
-from pytorch_lightning.utilities.seed import seed_everything
-
-from weaver.transforms import get_xform
-from weaver.transforms.twin_transforms import NqTwinTransform
+from lightning_lite import seed_everything
+from torchvision.transforms import Compose, Lambda
+from weaver import get_transforms
 
 from dataset import (
     SemiCIFAR10,
@@ -35,9 +34,9 @@ def train(args):
 
     N = trainer.num_nodes * trainer.num_devices
 
-    transform_w = get_xform('Compose', transforms=config['transform']['weak'])
-    transform_s = get_xform('Compose', transforms=config['transform']['str'])
-    transform_v = get_xform('Compose', transforms=config['transform']['val'])
+    transform_w = Compose(get_transforms(config['transform']['weak']))
+    transform_s = Compose(get_transforms(config['transform']['strong']))
+    transform_v = Compose(get_transforms(config['transform']['val']))
 
     Dataset = {
         'CIFAR10': SemiCIFAR10,
@@ -49,7 +48,7 @@ def train(args):
         config['dataset']['num_labeled'],
         transforms={
             'labeled': transform_w,
-            'unlabeled': NqTwinTransform(transform_s, transform_w),
+            'unlabeled': Lambda(lambda x: (transform_s(x), transform_w(x))),
             'val': transform_v
         },
         batch_sizes={

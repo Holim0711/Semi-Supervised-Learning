@@ -1,11 +1,9 @@
 import torch
 import pytorch_lightning as pl
 from torchmetrics import Accuracy
-from weaver.models import get_classifier
-from weaver.optimizers import get_optim
-from weaver.optimizers.utils import exclude_wd
-from weaver.schedulers import get_sched
-from .utils import EMA, change_bn_momentum, replace_relu_to_lrelu
+from weaver import get_classifier, get_optimizer, get_scheduler
+from weaver.optimizers import exclude_wd, EMAModel
+from .utils import change_bn_momentum, replace_relu_to_lrelu
 
 __all__ = ['FixMatchClassifier']
 
@@ -50,7 +48,7 @@ class FixMatchClassifier(pl.LightningModule):
 
         if m := self.hparams.model.get('ema'):
             change_bn_momentum(self.model, m)
-            self.ema = EMA(self.model, m)
+            self.ema = EMAModel(self.model, m)
             self.val_acc_ema = Accuracy()
 
     def training_step(self, batch, batch_idx):
@@ -127,6 +125,6 @@ class FixMatchClassifier(pl.LightningModule):
 
     def configure_optimizers(self):
         params = exclude_wd(self.model)
-        optim = get_optim(params, **self.hparams.optimizer)
-        sched = get_sched(optim, **self.hparams.scheduler)
+        optim = get_optimizer(params, **self.hparams.optimizer)
+        sched = get_scheduler(optim, **self.hparams.scheduler)
         return {'optimizer': optim, 'lr_scheduler': {'scheduler': sched}}

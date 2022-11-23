@@ -3,7 +3,7 @@
 ## Dependencies
 - PyTorch
 - PyTorch-Lightning
-- Weaver (https://github.com/Holim0711/Weaver)
+- Weaver (`pip install weaver-pytorch-rnx0dvmdxk`)
 
 ## List
 - FixMatch
@@ -13,32 +13,26 @@
 
 ### CIFAR10
 ```
-python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic
-python train.py configs/fixmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --dataset.num_labeled 250 --deterministic
-python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --deterministic
-python train.py configs/flexmatch/cifar10.json --gpus 1 --max_epoch 9362 --random_seed 0 --dataset.num_labeled 250 --deterministic
+python train.py configs/fixmatch/cifar10.json --accelerator gpu --devices 1 --max_epoch 9362 --random_seed 0 --dataset.num_labeled 100
+python train.py configs/flexmatch/cifar10.json --accelerator gpu --devices 1 --max_epoch 9362 --random_seed 0 --dataset.num_labeled 100
 ```
 
 ### CIFAR100
 ```
-python train.py configs/fixmatch/cifar100.json --gpus 4 --strategy ddp --sync_batchnorm --max_epoch 9362 --random_seed 0 --deterministic
-python train.py configs/flexmatch/cifar100.json --gpus 4 --strategy ddp --sync_batchnorm --max_epoch 9362 --random_seed 0 --deterministic
+python train.py configs/fixmatch/cifar100.json --accelerator gpu --devices 4 --strategy ddp --sync_batchnorm --max_epoch 9362 --random_seed 0 --dataset.num_labeled 1000
+python train.py configs/flexmatch/cifar100.json --accelerator gpu --devices 4 --strategy ddp --sync_batchnorm --max_epoch 9362 --random_seed 0 --dataset.num_labeled 1000
 ```
 
 ## Results
 
 ### CIFAR10
-|                   | 40           | 250          |
-| :---:             | :---:        | :---:        |
-| FixMatch (paper)  | 86.19 ± 3.37 | 94.93 ± 0.65 |
-| FixMatch (this)   | -            | -            |
-| FlexMatch (paper) | 95.03 ± 0.06 | 95.02 ± 0.09 |
-| FlexMatch (this)  | 95.63        | -            |
+|           | 40           | 100          | 250          |
+| :---:     | :---:        | :---:        | :---:        |
+| FixMatch  | -            | -            | -            |
+| FlexMatch | -            | -            | -            |
 
 ### CIFAR100
-|                   | 400          | 2500         |
-| :---:             | :---:        | :---:        |
-| FixMatch (paper)  | 51.15 ± 1.75 | 71.71 ± 0.11 |
-| FixMatch (this)   | -            | -            |
-| FlexMatch (paper) | 60.06 ± 1.62 | 73.51 ± 0.20 |
-| FlexMatch (this)  | -            | -            |
+|           | 400          | 1000         | 2500         |
+| :---:     | :---:        | :---:        | :---:        |
+| FixMatch  | -            | -            | -            |
+| FlexMatch | -            | -            | -            |
