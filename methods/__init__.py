@@ -1,2 +1,2 @@
-from .fixmatch import *
-from .flexmatch import *
+from .fixmatch import FixMatchModule
+from .flexmatch import FlexMatchModule

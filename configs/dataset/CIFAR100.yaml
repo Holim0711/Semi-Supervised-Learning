@@ -1,0 +1,6 @@
+name: CIFAR100
+root: /datasets/CIFAR100
+num_classes: 100
+num_samples: 50000
+num_labeled: 400
+random_seed: 0

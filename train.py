@@ -1,87 +1,61 @@
-import os
-import json
-import argparse
-
+import hydra
 from pytorch_lightning import Trainer
-from pytorch_lightning.loggers import TensorBoardLogger
+from pytorch_lightning.utilities.argparse import parse_env_variables
 from pytorch_lightning.callbacks import ModelCheckpoint, LearningRateMonitor
 from lightning_lite import seed_everything
 from torchvision.transforms import Compose, Lambda
 from weaver import get_transforms
 
-from dataset import (
-    SemiCIFAR10,
-    SemiCIFAR100,
-)
-from methods import (
-    FixMatchClassifier,
-    FlexMatchClassifier,
-)
+from methods import FixMatchModule, FlexMatchModule
+from datasets import CIFAR10DataModule, CIFAR100DataModule
 
 
-def train(args):
-    config = args.config
+@hydra.main(config_path='configs', version_base=None)
+def main(config):
     seed_everything(config['random_seed'])
 
-    trainer = Trainer.from_argparse_args(
-        args,
-        logger=TensorBoardLogger('logs', config['dataset']['name']),
+    trainer = Trainer(
+        **vars(parse_env_variables(Trainer)),
         callbacks=[
-            ModelCheckpoint(save_top_k=1, monitor='val/acc/ema', mode='max'),
+            ModelCheckpoint(monitor='val/acc', mode='max'),
             LearningRateMonitor(),
         ]
     )
 
-    N = trainer.num_nodes * trainer.num_devices
-
     transform_w = Compose(get_transforms(config['transform']['weak']))
     transform_s = Compose(get_transforms(config['transform']['strong']))
     transform_v = Compose(get_transforms(config['transform']['val']))
+    transforms = {
+        'labeled': transform_w,
+        'unlabeled': Lambda(lambda x: (transform_w(x), transform_s(x))),
+        'val': transform_v,
+    }
 
-    Dataset = {
-        'CIFAR10': SemiCIFAR10,
-        'CIFAR100': SemiCIFAR100,
-    }[config['dataset']['name']]
+    batch_sizes = config['batch_size']
+    batch_sizes = {k: v // trainer.num_devices for k, v in batch_sizes.items()}
 
-    dm = Dataset(
-        os.path.join('data', config['dataset']['name']),
-        config['dataset']['num_labeled'],
-        transforms={
-            'labeled': transform_w,
-            'unlabeled': Lambda(lambda x: (transform_s(x), transform_w(x))),
-            'val': transform_v
-        },
-        batch_sizes={
-            'labeled': config['dataset']['batch_sizes']['labeled'] // N,
-            'unlabeled': config['dataset']['batch_sizes']['unlabeled'] // N,
-            'val': config['dataset']['batch_sizes']['val'],
-        },
-        random_seed=config['dataset']['random_seed'],
-        expand_labeled=True,
-        enumerate_unlabeled=True,
-    )
+    if config['dataset']['name'] == 'CIFAR10':
+        dm = CIFAR10DataModule(
+            config['dataset']['root'],
+            config['dataset']['num_labeled'],
+            transforms=transforms,
+            batch_sizes=batch_sizes,
+            random_seed=config['dataset']['random_seed'])
+    elif config['dataset']['name'] == 'CIFAR100':
+        dm = CIFAR100DataModule(
+            config['dataset']['root'],
+            config['dataset']['num_labeled'],
+            transforms=transforms,
+            batch_sizes=batch_sizes,
+            random_seed=config['dataset']['random_seed'])
 
-    if config['method'] == 'fixmatch':
-        model = FixMatchClassifier(**config)
-    elif config['method'] == 'flexmatch':
-        model = FlexMatchClassifier(**config)
+    if config['method']['name'] == 'FixMatch':
+        model = FixMatchModule(**config)
+    elif config['method']['name'] == 'FlexMatch':
+        model = FlexMatchModule(**config)
 
     trainer.fit(model, dm)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config', type=lambda x: json.load(open(x)))
-    parser.add_argument('--dataset.num_labeled', type=int)
-    parser.add_argument('--dataset.random_seed', type=int)
-    parser.add_argument('--random_seed', type=int)
-    parser = Trainer.add_argparse_args(parser)
-
-    args = parser.parse_args()
-    if (v := getattr(args, 'dataset.num_labeled')) is not None:
-        args.config['dataset']['num_labeled'] = v
-    if (v := getattr(args, 'dataset.random_seed')) is not None:
-        args.config['dataset']['random_seed'] = v
-    if (v := getattr(args, 'random_seed')) is not None:
-        args.config['random_seed'] = v
-    train(args)
+    main()

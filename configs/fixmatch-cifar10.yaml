@@ -1,0 +1,42 @@
+defaults:
+    - dataset: CIFAR10
+    - _self_
+transform:
+    weak:
+        - {"name": "RandomHorizontalFlip"}
+        - {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"}
+        - {"name": "ToTensor"}
+        - {"name": "Normalize", "mean": "cifar10", "std": "cifar10"}
+    strong:
+        - {"name": "RandomHorizontalFlip"}
+        - {"name": "RandomCrop", "size": 32, "padding": 4, "padding_mode": "reflect"}
+        - {"name": "AllRandAugment", "num_ops": 2, "fill": "cifar10"}
+        - {"name": "Cutout", "ratio": 0.5, "fill": "cifar10"}
+        - {"name": "ToTensor"}
+        - {"name": "Normalize", "mean": "cifar10", "std": "cifar10"}
+    val:
+        - {"name": "ToTensor"}
+        - {"name": "Normalize", "mean": "cifar10", "std": "cifar10"}
+method:
+    name: FixMatch
+    temperature: 1.0
+    threshold: 0.95
+model:
+    src: weaver
+    name: wide_resnet28_2
+    num_classes: 10
+ema: 0.999
+batch_size:
+    labeled: 64
+    unlabeled: 448
+    val: 512
+optimizer:
+    name: SGD
+    lr: 0.03
+    momentum: 0.9
+    weight_decay: 0.0005
+    nesterov: true
+scheduler:
+    name: HalfCosineAnnealingLR
+    T_max: 10700
+random_seed: 0
