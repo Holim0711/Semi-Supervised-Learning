@@ -39,13 +39,13 @@ class BaseModule(pl.LightningModule):
             self.hparams['dataset']['num_classes'])
 
     def forward(self, x):
-        if self.hparams.model.get('ema'):
+        if self.hparams.get('ema'):
             return self.ema(x)
         return self.model(x)
 
     def optimizer_step(self, *args, **kwargs):
         super().optimizer_step(*args, **kwargs)
-        if self.hparams.model.get('ema'):
+        if self.hparams.get('ema'):
             self.ema.update_parameters(self.model)
 
     def validation_step(self, batch, batch_idx):
