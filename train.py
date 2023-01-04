@@ -6,7 +6,7 @@ from lightning_lite import seed_everything
 from torchvision.transforms import Compose, Lambda
 from weaver import get_transforms
 
-from methods import FixMatchModule, FlexMatchModule
+from methods import FixMatchModule, FlexMatchModule, FlexDashhModule
 from datasets import CIFAR10DataModule, CIFAR100DataModule
 
 
@@ -53,6 +53,8 @@ def main(config):
         model = FixMatchModule(**config)
     elif config['method']['name'] == 'FlexMatch':
         model = FlexMatchModule(**config)
+    elif config['method']['name'] == 'FlexDash':
+        model = FlexDashhModule(**config)
 
     trainer.fit(model, dm)
 
