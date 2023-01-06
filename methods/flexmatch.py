@@ -39,12 +39,10 @@ class FlexMatchModule(FixMatchModule):
             self.hparams.method['temperature'],
             self.hparams.method['threshold'])
 
-    def training_step(self, batch, batch_idx):
-        result = super().training_step(batch, batch_idx)
+    def on_train_batch_end(self, outputs, batch, batch_idx):
         i = batch['unlabeled'][0]
         ŷ = self.criterionᵘ.ŷ
         if torch.distributed.is_initialized():
             i = self.all_gather(i).flatten(end_dim=1)
             ŷ = self.all_gather(ŷ).flatten(end_dim=1)
         self.criterionᵘ.Ŷ[i[ŷ != -1]] = ŷ[ŷ != -1]
-        return result
