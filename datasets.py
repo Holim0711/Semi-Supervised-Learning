@@ -77,16 +77,18 @@ class CIFAR10DataModule(BaseDataModule):
         CIFAR10(self.root, download=True)
 
     def get_raw_dataset(self, split: str):
-        t = self.transforms[split]
+        transform = self.transforms.get(split)
         if split == 'labeled':
-            return RandomSubset(CIFAR10(self.root, transform=t),
+            return RandomSubset(CIFAR10(self.root, transform=transform),
                                 self.num_labeled,
                                 class_balanced=True,
                                 random_seed=self.random_seed)
         elif split == 'unlabeled':
-            return CIFAR10(self.root, transform=t)
+            return CIFAR10(self.root, transform=transform)
         elif split == 'val':
-            return CIFAR10(self.root, train=False, transform=t)
+            return CIFAR10(self.root, train=False, transform=transform)
+        else:
+            raise KeyError(split)
 
 
 class CIFAR100DataModule(BaseDataModule):
@@ -107,13 +109,15 @@ class CIFAR100DataModule(BaseDataModule):
         CIFAR100(self.root, download=True)
 
     def get_raw_dataset(self, split: str):
-        t = self.transforms[split]
+        transform = self.transforms.get(split)
         if split == 'labeled':
-            return RandomSubset(CIFAR100(self.root, transform=t),
+            return RandomSubset(CIFAR100(self.root, transform=transform),
                                 self.num_labeled,
                                 class_balanced=True,
                                 random_seed=self.random_seed)
         elif split == 'unlabeled':
-            return CIFAR100(self.root, transform=t)
+            return CIFAR100(self.root, transform=transform)
         elif split == 'val':
-            return CIFAR100(self.root, train=False, transform=t)
+            return CIFAR100(self.root, train=False, transform=transform)
+        else:
+            raise KeyError(split)
