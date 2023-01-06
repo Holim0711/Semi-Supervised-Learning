@@ -12,14 +12,11 @@ class BaseDataModule(LightningDataModule):
     def __init__(
         self,
         root: str,
-        num_labeled: int,
         transforms: dict[str, Callable],
         batch_sizes: dict[str, int],
     ):
         super().__init__()
         self.root = root
-        self.num_labeled = num_labeled
-
         self.splits = ['labeled', 'unlabeled', 'val']
         self.transforms = {k: transforms[k] for k in self.splits}
         self.batch_sizes = {k: batch_sizes[k] for k in self.splits}
@@ -72,7 +69,8 @@ class CIFAR10DataModule(BaseDataModule):
         batch_sizes: dict[str, int],
         random_seed: int = 0,
     ):
-        super().__init__(root, num_labeled, transforms, batch_sizes)
+        super().__init__(root, transforms, batch_sizes)
+        self.num_labeled = num_labeled
         self.random_seed = random_seed
 
     def prepare_data(self):
@@ -101,7 +99,8 @@ class CIFAR100DataModule(BaseDataModule):
         batch_sizes: dict[str, int],
         random_seed: int = 0,
     ):
-        super().__init__(root, num_labeled, transforms, batch_sizes)
+        super().__init__(root, transforms, batch_sizes)
+        self.num_labeled = num_labeled
         self.random_seed = random_seed
 
     def prepare_data(self):
