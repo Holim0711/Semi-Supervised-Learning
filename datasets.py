@@ -12,14 +12,11 @@ class BaseDataModule(LightningDataModule):
     def __init__(
         self,
         root: str,
-        num_labeled: int,
         transforms: dict[str, Callable],
         batch_sizes: dict[str, int],
     ):
         super().__init__()
         self.root = root
-        self.num_labeled = num_labeled
-
         self.splits = ['labeled', 'unlabeled', 'val']
         self.transforms = {k: transforms[k] for k in self.splits}
         self.batch_sizes = {k: batch_sizes[k] for k in self.splits}
@@ -72,23 +69,26 @@ class CIFAR10DataModule(BaseDataModule):
         batch_sizes: dict[str, int],
         random_seed: int = 0,
     ):
-        super().__init__(root, num_labeled, transforms, batch_sizes)
+        super().__init__(root, transforms, batch_sizes)
+        self.num_labeled = num_labeled
         self.random_seed = random_seed
 
     def prepare_data(self):
         CIFAR10(self.root, download=True)
 
     def get_raw_dataset(self, split: str):
-        t = self.transforms[split]
+        transform = self.transforms.get(split)
         if split == 'labeled':
-            return RandomSubset(CIFAR10(self.root, transform=t),
+            return RandomSubset(CIFAR10(self.root, transform=transform),
                                 self.num_labeled,
                                 class_balanced=True,
                                 random_seed=self.random_seed)
         elif split == 'unlabeled':
-            return CIFAR10(self.root, transform=t)
+            return CIFAR10(self.root, transform=transform)
         elif split == 'val':
-            return CIFAR10(self.root, train=False, transform=t)
+            return CIFAR10(self.root, train=False, transform=transform)
+        else:
+            raise KeyError(split)
 
 
 class CIFAR100DataModule(BaseDataModule):
@@ -101,20 +101,23 @@ class CIFAR100DataModule(BaseDataModule):
         batch_sizes: dict[str, int],
         random_seed: int = 0,
     ):
-        super().__init__(root, num_labeled, transforms, batch_sizes)
+        super().__init__(root, transforms, batch_sizes)
+        self.num_labeled = num_labeled
         self.random_seed = random_seed
 
     def prepare_data(self):
         CIFAR100(self.root, download=True)
 
     def get_raw_dataset(self, split: str):
-        t = self.transforms[split]
+        transform = self.transforms.get(split)
         if split == 'labeled':
-            return RandomSubset(CIFAR100(self.root, transform=t),
+            return RandomSubset(CIFAR100(self.root, transform=transform),
                                 self.num_labeled,
                                 class_balanced=True,
                                 random_seed=self.random_seed)
         elif split == 'unlabeled':
-            return CIFAR100(self.root, transform=t)
+            return CIFAR100(self.root, transform=transform)
         elif split == 'val':
-            return CIFAR100(self.root, train=False, transform=t)
+            return CIFAR100(self.root, train=False, transform=transform)
+        else:
+            raise KeyError(split)
