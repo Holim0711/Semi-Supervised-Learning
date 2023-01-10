@@ -42,7 +42,7 @@ class FlexDashCrossEntropy(torch.nn.Module):
         return (loss * mask).mean()
 
 
-class FlexDashhModule(FlexMatchModule):
+class FlexDashModule(FlexMatchModule):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.criterionᵘ = FlexDashCrossEntropy(
