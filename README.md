@@ -20,12 +20,14 @@ export PL_TRAINER_MAX_EPOCHS=9362
 
 ## Training
 ```bash
+python train.py --config-name={config name}
 python train.py --config-name=fixmatch-cifar10
 ```
 
 ### Testing
 ```bash
-python test.py lightning_logs/version_0/hparams.yaml lightning_logs/checkpoints/epoch=0-step=0.ckpt
+python test.py {version number}
+python test.py 0
 ```
 
 ## Results
@@ -33,11 +35,13 @@ python test.py lightning_logs/version_0/hparams.yaml lightning_logs/checkpoints/
 ### CIFAR10
 |           | 40           | 100          | 250          |
 | :---:     | :---:        | :---:        | :---:        |
-| FixMatch  | -            | -            | -            |
-| FlexMatch | -            | -            | -            |
+| FixMatch  | 90.99        | -            | -            |
+| FlexMatch | 95.43        | -            | -            |
+| FlexDash  | 95.50        | -            | -            |
 
 ### CIFAR100
 |           | 400          | 1000         | 2500         |
 | :---:     | :---:        | :---:        | :---:        |
 | FixMatch  | -            | -            | -            |
 | FlexMatch | -            | -            | -            |
+| FlexDash  | -            | -            | -            |
