@@ -1,58 +1,57 @@
 import os
-import json
-import argparse
-
+import sys
+import re
+import yaml
 from pytorch_lightning import Trainer
+from pytorch_lightning.utilities.argparse import parse_env_variables
 from torchvision.transforms import Compose
+from torchvision.datasets import CIFAR10, CIFAR100
+from torch.utils.data import DataLoader
 from weaver import get_transforms
 
-from dataset import (
-    SemiCIFAR10,
-    SemiCIFAR100,
-)
-from methods import (
-    FixMatchClassifier,
-    FlexMatchClassifier,
-)
+from methods import FixMatchModule, FlexMatchModule, FlexDashhModule
 
 
-def test(args):
-    config = args.config
+def test(config, checkpoint):
+    trainer = Trainer(**vars(parse_env_variables(Trainer)), logger=False)
 
-    trainer = Trainer.from_argparse_args(args, logger=False)
+    t = Compose(get_transforms(config['transform']['val']))
 
-    transform_v = Compose(get_transforms(config['transform']['val']))
+    if config['dataset']['name'] == 'CIFAR10':
+        dataset = CIFAR10(config['dataset']['root'], train=False, transform=t)
+    elif config['dataset']['name'] == 'CIFAR100':
+        dataset = CIFAR100(config['dataset']['root'], train=False, transform=t)
 
-    Dataset = {
-        'CIFAR10': SemiCIFAR10,
-        'CIFAR100': SemiCIFAR100,
-    }[config['dataset']['name']]
+    dataloader = DataLoader(
+        dataset, config['batch_size']['val'],
+        num_workers=os.cpu_count(), pin_memory=True)
 
-    dm = Dataset(
-        os.path.join('data', config['dataset']['name']),
-        config['dataset']['num_labeled'],
-        transforms={
-            'val': transform_v
-        },
-        batch_sizes={
-            'val': config['dataset']['batch_sizes']['val'],
-        },
-        random_seed=config['dataset']['random_seed'],
-    )
+    if config['method']['name'] == 'FixMatch':
+        model = FixMatchModule.load_from_checkpoint(checkpoint)
+    elif config['method']['name'] == 'FlexMatch':
+        model = FlexMatchModule.load_from_checkpoint(checkpoint)
+    elif config['method']['name'] == 'FlexDash':
+        model = FlexDashhModule.load_from_checkpoint(checkpoint)
 
-    if config['method'] == 'fixmatch':
-        model = FixMatchClassifier.load_from_checkpoint(args.checkpoint)
-    elif config['method'] == 'flexmatch':
-        model = FlexMatchClassifier.load_from_checkpoint(args.checkpoint)
-
-    trainer.test(model, dm)
+    trainer.test(model, dataloader)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('config', type=lambda x: json.load(open(x)))
-    parser.add_argument('checkpoint', type=str)
-    parser = Trainer.add_argparse_args(parser)
+    v = int(sys.argv[1])
+    hparams = os.path.join('lightning_logs', f'version_{v}', 'hparams.yaml')
+    hparams = yaml.load(open(hparams), Loader=yaml.FullLoader)
 
-    args = parser.parse_args()
-    test(args)
+    ckptdir = os.path.join('lightning_logs', f'version_{v}', 'checkpoints')
+    checkpoints = os.listdir(ckptdir)
+    if len(checkpoints) == 0:
+        raise Exception('there are no checkpoints')
+    elif len(checkpoints) == 1:
+        checkpoint = os.path.join(ckptdir, checkpoints[0])
+    elif len(checkpoints) > 1:
+        checkpoints.sort(key=lambda s: [int(t) if t.isdigit() else t
+                                        for t in re.split(r'(\d+)', s)])
+        ckpt = checkpoints[int(sys.argv[2])]
+        print(f'loading {ckpt}..', file=sys.stderr)
+        checkpoint = os.path.join(ckptdir, ckpt)
+
+    test(hparams, checkpoint)
